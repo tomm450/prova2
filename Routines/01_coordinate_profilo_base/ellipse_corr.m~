@@ -1,0 +1,36 @@
+function [ matout ] = ellipse_corr( matin )
+% - matin -> matrice coordinata in ingresso ([1 0 1]',[up LE dwn]')
+
+[~,iLE] = min(matin(:,1));
+
+up  = flipud(matin(1:iLE,:)); 
+
+if min(up(:,1)) ~= 0
+    error(''); 
+end
+if max(up(:,1)) ~= 1
+    error(''); 
+end
+dwn = matin(iLE:end,:);
+if min(dwn(:,1)) ~= 0
+    error(''); 
+end
+if max(dwn(:,1)) ~= 1
+    error(''); 
+end
+
+dwn(:,2) = -dwn(:,2);
+
+% posso fare la stessa procedura per entrambi
+rpt = 0.005;
+
+[~,iru] = min(abs(up(:,1) - rpt));
+[~,ird] = min(abs(dwn(:,1) - rpt));
+
+pen_up = (up(iru+1,2) - up(iru,2))/(up(iru+1,1) - up(iru,1));
+pen_dwn = (dwn(ird+1,2) - dwn(ird,2))/(dwn(ird+1,1) - dwn(ird,1));
+
+y_up = @(a,b) sqrt(b.^2.*(1-up(iru,1).^2./a.^2))
+
+end
+
