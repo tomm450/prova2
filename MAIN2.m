@@ -17,7 +17,8 @@ IN   = [50 250 50 250 50 2 0.02 0.03];
 % INPUT UTENTE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Parameters.n_processori = 3;
-
+Parameters.gmsh_cmd     = 'gmsh';             % fisso
+Parameters.gmsh_cmd     = '~/Documents/gmsh'; % portatile
 % carico dati profilo
 Airfoil = load('NACA64212at.txt');
 
@@ -76,9 +77,31 @@ GM_par.l_airfoil = 0.0008;%GM_par.l_dom/5000;%0.002;
 GM_par.l_slat    = 0.0008;%GM_par.l_dom/5000;%0.001;
 GM_par.Fstruct   = 0;
 GM_par.Fquad     = 1;
-% %
-% GM_par.rref      = 1; %1.5
-% GM_par.lref      = 0.6; %50*GM_par.l_airfoil;
+% GM refinement
+% casi attualmente implementati
+%     case {'none'}
+%         method_par = {};
+%         done = 1;
+%     case {'clock_simple'}
+%         % 24 punti su circonferenza di raggio rref di dimensione lref
+%         rref = method_par{1};
+%         lref = method_par{2};
+%     case 'sublinear'
+%         
+%         % parametri per forma ellisse
+%         ellx = method_par{1};
+%         elly = method_par{2};
+%         
+%         % raggio interpolazione lineare
+%         rref  = method_par{3}; 
+%         % coefficiente tc nuova lunghezza a rref sia lref*l_linear
+%         lref  = method_par{4};
+%         % numero circonferenze da marchiare
+%         nstaz = method_par{5};
+GM_par.ref_method = 'none';
+GM_par.par_method = {};
+
+
 % % %
 MESH_par = GM_par;
 

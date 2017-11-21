@@ -28,15 +28,12 @@ tstart = tic;
 %% GEOM
 [GEOM] = GEOM_phase2(X_IN,IN,Parameters);
 
-%l_airfoil = 0.002; 
-l_airfoil_str = 'l_a';
-%l_slat    = 0.001; 
-l_slat_str    = 'l_s';
-%l_dom     = 0.2;   
-l_dom_str     = 'l_d';
-%     = 10;    
-x_dom_str     = 'x_d';
+%% FILE .geo
 
+l_airfoil_str = 'l_a';
+l_slat_str    = 'l_s';
+l_dom_str     = 'l_d';
+x_dom_str     = 'x_d';
 
 if GM_par.wtd == 0
     pu = Parameters.Airfoil.up(round(linspace(1,size(Parameters.Airfoil.up,1),10)),:);
@@ -81,7 +78,6 @@ else
   pend1 = 0;
 end
 
-
 % curva superiore slat
 if GM_par.wtd == 2 || GM_par.wtd == 3
   for k = 1:size(ps,1)-1
@@ -111,16 +107,18 @@ fprintf(fid,'Line Loop(101) = {1, 2, 3, 4};\n');
 
 
 if GM_par.wtd == 0 || GM_par.wtd == 1 
+ 
  fprintf(fid,'Spline(5) = {1:%d,1};\n',size(p,1));
  fprintf(fid,'Line Loop(102) = {5};\n');
 
  surf_string ='101, 102';
 
 elseif GM_par.wtd == 2 
+
  fprintf(fid,'Spline(6) = {%d:%d, %d};\n',pend1+1,pend,pend1+1);%,pend1+1);
  fprintf(fid,'Line Loop(103) = {6};\n');
+ surf_string ='101, 103';
 
-  surf_string ='101, 103';
 elseif GM_par.wtd == 3 
  fprintf(fid,'Spline(5) = {1:%d,1};\n',size(p,1));
  fprintf(fid,'Spline(6) = {%d:%d, %d};\n',pend1+1,pend,pend1+1);%,pend1+1);
@@ -129,6 +127,7 @@ elseif GM_par.wtd == 3
  fprintf(fid,'Line Loop(103) = {6};\n');
 
  surf_string ='101, 102, 103';
+ 
 end
 
 
@@ -149,38 +148,30 @@ end
 
 end
 
-%% 
-% ellx = 1; elly = 1;
-% clock_angle = linspace(0,2*pi,24); clock_angle = clock_angle(1:end-1);
-% 
-% l_linear = spline([0.75 x_dom],[l_airfoil l_dom],rref);
-% 
-% r_inter = linspace(0.75,x_dom,10); r_inter = r_inter(2:end-1);
-% % r_inter = linspace(0.75,x_dom,36); 
-% % r_inter = [r_inter(1:6),r_inter(7:2:16),r_inter(18:3:27)];
-% 
-% l_inter = spline([0.75 rref x_dom],[l_airfoil lref*l_linear l_dom],r_inter);
-% 
-% spacing = figure(22); plot(r_inter,l_inter,'o',[0.75 x_dom],[l_airfoil l_dom],'--',rref,l_linear,'*');title('Size spacing');grid on;
-% savefig(spacing,strcat(case_dir,'/spacing.fig'));
-% pause(1); close 22
-% 
-% for w = 1:23
-% 
-%     for ww = 1:max(size(l_inter))
-%         lastpoint = lastpoint +1;
-%         fprintf(fid,'Point(%d) = { %f,  0.0000000,  %f,  %f};\n',lastpoint,0.5+ellx*r_inter(ww)*cos(clock_angle(w)),...
-%             elly*r_inter(ww)*sin(clock_angle(w)),l_inter(ww));
-%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
-%     end
-% 
-% end
+%% REFINE MODULE
+% casi attualmente implementati
+%     case {'none'}
+%         method_par = {};
+%         done = 1;
+%     case {'clock_simple'}
+%         % 24 punti su circonferenza di raggio rref di dimensione lref
+%         rref = method_par{1};
+%         lref = method_par{2};
+%     case 'sublinear'
+%         
+%         % parametri per forma ellisse
+%         ellx = method_par{1};
+%         elly = method_par{2};
+%         
+%         % raggio interpolazione lineare
+%         rref  = method_par{3}; 
+%         % coefficiente tc nuova lunghezza a rref sia lref*l_linear
+%         lref  = method_par{4};
+%         % numero circonferenze da marchiare
+%         nstaz = method_par{5};
 
-% w = 24;
-%    fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint+w,l_airfoil/5);
-%    fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+w);
-%    fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+w+1,l_airfoil/5);
-%    fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+w+1);
+[done] = refineModuleGmsh(GM_par.ref_method,GM_par.par_method,fid,lastpoint);
+
 
 %//Extrude unstructured far field mesh
 fprintf(fid,'Extrude {0, 1, 0} {\n');
@@ -215,16 +206,15 @@ fprintf(fid,'Physical Surface("airfoil") = {228, 232};\n');
 fprintf(fid,'Physical Volume("internal") = {1};\n');
 end
 
-
-
 fclose(fid);
 
+%% ACTUAL MESHING
 
-%%
 system(sprintf('touch %s/logmesh.txt',case_dir));
 
 % mesh
-[status] = goGoGmsh(sprintf('-3 -o %s/0msh/tom.msh %s/0msh/tom.geo > %s/logmesh.txt',case_dir,case_dir,case_dir));
+[status] = goGoGmsh(sprintf('-3 -o %s/0msh/tom.msh %s/0msh/tom.geo > %s/logmesh.txt',case_dir,case_dir,case_dir),...
+    Parameters.gmsh_cmd);
 
 % copio e converto
 [status] = system(sprintf('rm %s/15dummy/*.msh >> %s/logmesh.txt',case_dir,case_dir));
@@ -232,16 +222,13 @@ system(sprintf('touch %s/logmesh.txt',case_dir));
 [status] = system(sprintf('cp %s/0msh/tom.msh %s/15dummy >> %s/logmesh.txt',case_dir,case_dir,case_dir));
 [status] = goGoOpenFOAM(sprintf('cd %s/15dummy &&  gmshToFoam ./tom.msh >> ../logmesh.txt',case_dir));
 
-
 % sistemo BC
 [done] = BC_cor('def',case_dir);
 
 [status] = system(sprintf('rm  %s/20extrude/constant/polyMesh/* >> %s/logmesh.txt',case_dir,case_dir));
 
-
 [status] = system(sprintf('rm -r %s/30simple/constant/polyMesh >> %s/logmesh.txt',case_dir,case_dir));
 [status] = system(sprintf('rm -r %s/40piso/constant/polyMesh >> %s/logmesh.txt',case_dir,case_dir));
-
 
 [status] = goGoOpenFOAM(sprintf('cd %s/20extrude && extrudeMesh >> ../logmesh.txt',case_dir));% && paraFoam');
 
