@@ -8,7 +8,8 @@ my_dir = my_dir.path;
 my_dirs = genpath(my_dir);
 addpath(my_dirs);
 
-
+%Parameters.gmsh_cmd     = 'gmsh';             % fisso
+Parameters.gmsh_cmd     = '~/Documents/gmsh'; % portatile
 % winner geometry
 IN   = [50 250 50 250 50 2 0.02 0.03];
 Parameters.n_processori = 8;
@@ -69,7 +70,7 @@ STL.point_txt     = 'NACA64212at.txt';
 x_dom     = 20; % semilato quadrato
 % %n_cell_ff =  10; % numero celle su semilato
 expRatio  = 1.3;
-n_cell_ff = 10;
+n_cell_ff = 20;
 
 % % % GMSH
 GM_par.wtd       = 0;
@@ -78,14 +79,42 @@ GM_par.x_dom     = x_dom;
 % %
 GM_par.l_dom     = GM_par.x_dom/(2*n_cell_ff);
 GM_par.expRatio  = expRatio;
-GM_par.l_airfoil_v = [0.01 0.005 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
+GM_par.l_airfoil_v = [0.001]% 0.005 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
 %GM_par.l_slat    = 0.0008;%GM_par.l_dom/5000;%0.001;
 GM_par.Fstruct   = 1;
 GM_par.Fquad     = 1;
-% %
-% GM_par.rref      = 1; %1.5
-% GM_par.lref      = 0.6; %50*GM_par.l_airfoil;
-% % %
+% GM refinement
+% casi attualmente implementati
+%     case {'none'}
+%         method_par = {};
+%         done = 1;
+%     case {'clock_simple'}
+%         % 24 punti su circonferenza di raggio rref di dimensione lref
+%         rref = method_par{1};
+%         lref = method_par{2};
+%     case 'sublinear'
+%         % parametri per forma ellisse
+%         ellx = method_par{1};
+%         elly = method_par{2};
+%         
+%         % raggio interpolazione lineare
+%         rref  = method_par{3}; 
+%         % coefficiente tc nuova lunghezza a rref sia lref*l_linear
+%         lref  = method_par{4};
+%         % numero circonferenze da marchiare
+%         nstaz = method_par{5};
+%    case 'wake'
+%       posizione verticale centro raccordo
+%       y_c = method_par{1};
+%       altezza scia all'outlet
+%       y_w = method_par{2};
+%       raggio raccordo 
+%       r   = method_par{3};
+%       lunghezza elementi
+%       l_w = method_par{4};
+
+GM_par.ref_method = 'wake';
+GM_par.par_method = {0.5,2,1,0.05};
 MESH_par = GM_par;
 
 % % OPENFOAM

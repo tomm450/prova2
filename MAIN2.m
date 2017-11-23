@@ -16,6 +16,7 @@ IN   = [50 250 50 250 50 2 0.02 0.03];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % INPUT UTENTE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Parameters.n_processori = 3;
 Parameters.gmsh_cmd     = 'gmsh';             % fisso
 Parameters.gmsh_cmd     = '~/Documents/gmsh'; % portatile
@@ -48,19 +49,20 @@ BU_par.Umag  = 135;         %m/s
 BU_par.p     = 0;
 %
 BU_par.BU_type = 'freestream';%{'freestream','fixedValue'}; %%%%
-BU_par.L    = 1;          %m
-BU_par.Nu   = 0.000018375; %kg/m s
-BU_par.Rho  = 1.225;       %kg/m3
+BU_par.L     = 1;          %m
+BU_par.Nu    = 0.000018375; %kg/m s
+BU_par.Rho   = 1.225;       %kg/m3
 BU_par.alpha = 15;
 BU_par.Ux = BU_par.Umag*cos(BU_par.alpha*pi/180);
 BU_par.Uz = BU_par.Umag*sin(BU_par.alpha*pi/180);
+
 BU_par.extrusion_Thickness = 0.05; %m
 
 %% HS
 Parameters.HSA.npane = 100;
 %% MODELLO CFD
 
-STL.point_txt     = 'NACA64212at.txt';
+STL.point_txt = 'NACA64212at.txt';
 % mesher Gmsh o snappyHexMesh
 x_dom     = 20; % semilato quadrato
 expRatio  = 1.3;
@@ -73,10 +75,11 @@ GM_par.x_dom     = x_dom;
 % 
 GM_par.l_dom     = GM_par.x_dom/(2*n_cell_ff);
 GM_par.expRatio  = expRatio;
-GM_par.l_airfoil = 0.0008;%GM_par.l_dom/5000;%0.002;
-GM_par.l_slat    = 0.0008;%GM_par.l_dom/5000;%0.001;
+GM_par.l_airfoil = 0.02;%GM_par.l_dom/5000;%0.002;
+GM_par.l_slat    = 0.02;%GM_par.l_dom/5000;%0.001;
 GM_par.Fstruct   = 0;
 GM_par.Fquad     = 1;
+
 % GM refinement
 % casi attualmente implementati
 %     case {'none'}
@@ -87,7 +90,6 @@ GM_par.Fquad     = 1;
 %         rref = method_par{1};
 %         lref = method_par{2};
 %     case 'sublinear'
-%         
 %         % parametri per forma ellisse
 %         ellx = method_par{1};
 %         elly = method_par{2};
@@ -98,6 +100,7 @@ GM_par.Fquad     = 1;
 %         lref  = method_par{4};
 %         % numero circonferenze da marchiare
 %         nstaz = method_par{5};
+
 GM_par.ref_method = 'none';
 GM_par.par_method = {};
 

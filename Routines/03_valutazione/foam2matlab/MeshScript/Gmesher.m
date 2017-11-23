@@ -42,7 +42,7 @@ if GM_par.wtd == 0
     %p = [p(1:5:end,:)];
 elseif GM_par.wtd == 1
     p = [flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
-    p = [p(1:5:end,:)];
+    %p = [p(1:5:end,:)];
 elseif GM_par.wtd == 2
     psu = flipud(GEOM.slat_land_u)/1000; psu = psu(round(linspace(1,size(psu,1),150)),:);
     psd = GEOM.slat_land_d/1000;         psd = psd(round(linspace(1,size(psd,1),150)),:);
@@ -50,7 +50,7 @@ elseif GM_par.wtd == 2
     ps = [psu(1:end-1,:);psd(1:end-1,:)];
 elseif GM_par.wtd == 3
     p = [flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
-    p = [p(1:5:end,:)];
+    %p = [p(1:5:end,:)];
     
     psu = flipud(GEOM.slat_land_u)/1000; psu = psu(round(linspace(1,size(psu,1),150)),:);
     psd = GEOM.slat_land_d/1000;         psd = psd(round(linspace(1,size(psd,1),150)),:);
@@ -70,9 +70,12 @@ fprintf(fid,'%s = %f; \n',x_dom_str,x_dom);
 if GM_par.wtd == 0 || GM_par.wtd == 1 || GM_par.wtd == 3
 
   for k = 1:size(p,1)
-    fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %s};\n',k,p(k,1),p(k,2),l_airfoil_str);
+      if p(k,1) < 0.1
+        fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %f};\n',k,p(k,1),p(k,2),l_airfoil/5);
+      else
+        fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %s};\n',k,p(k,1),p(k,2),l_airfoil_str);
+      end
   end
-
   pend1 = k;
 else
   pend1 = 0;
@@ -95,6 +98,7 @@ fprintf(fid,'Point(%d) = { -%s, 0.0000000, -%s,%s};\n',pend+3,x_dom_str,x_dom_st
 fprintf(fid,'Point(%d) = { -%s, 0.0000000,  %s, %s};\n',pend+4,x_dom_str,x_dom_str,l_dom_str);
 
 lastpoint = pend+4;
+
 %//Define bounding box edges
 fprintf(fid,'Line(1) = {%d, %d};\n',pend+1,pend+2);
 fprintf(fid,'Line(2) = {%d, %d};\n',pend+2,pend+3);
@@ -120,6 +124,7 @@ elseif GM_par.wtd == 2
  surf_string ='101, 103';
 
 elseif GM_par.wtd == 3 
+    
  fprintf(fid,'Spline(5) = {1:%d,1};\n',size(p,1));
  fprintf(fid,'Spline(6) = {%d:%d, %d};\n',pend1+1,pend,pend1+1);%,pend1+1);
   
@@ -130,22 +135,20 @@ elseif GM_par.wtd == 3
  
 end
 
-
-
 %//Define unstructured far field mesh zone
 fprintf(fid,'Plane Surface(201) = {%s};\n',surf_string);
 
 if FAKE_struct == 1
-fprintf(fid,' Transfinite Surface{201}={%s};\n',surf_string);
-%    // forces later meshing to contain structured triangles
-%    // e.g. Transfinite Surface{6} = {1,2,3,4};
-if QUAD  == 1
+    fprintf(fid,' Transfinite Surface{201}={%s};\n',surf_string);
+    %    // forces later meshing to contain structured triangles
+    %    // e.g. Transfinite Surface{6} = {1,2,3,4};
+    if QUAD  == 1
+        
+        fprintf(fid,'    Recombine Surface{201};\n');
+        %    //combine triangles to quadrangles
+        %    // e.g.Recombine Surface{6};
+    end
     
-fprintf(fid,'    Recombine Surface{201};\n');
-%    //combine triangles to quadrangles
-%    // e.g.Recombine Surface{6};
-end
-
 end
 
 %% REFINE MODULE
@@ -170,8 +173,8 @@ end
 %         % numero circonferenze da marchiare
 %         nstaz = method_par{5};
 
-[done] = refineModuleGmsh(GM_par.ref_method,GM_par.par_method,fid,lastpoint);
-
+[done] = refineModuleGmsh(GM_par.ref_method,GM_par.par_method,...
+    fid,lastpoint,l_airfoil,x_dom);
 
 %//Extrude unstructured far field mesh
 fprintf(fid,'Extrude {0, 1, 0} {\n');
@@ -180,36 +183,27 @@ fprintf(fid,'Layers{1};\n');
 fprintf(fid,'Recombine;\n');
 fprintf(fid,'}\n');
 
-
 if GM_par.wtd <= 2
-%//Define physical surfaces - numeric designations from GUI
-fprintf(fid,'Physical Surface("back") = {228};\n');
-fprintf(fid,'Physical Surface("front") = {201};\n');
-%fprintf(fid,'Physical Surface("top") = {223};\n');
-%fprintf(fid,'Physical Surface("bottom") = {215};\n');
-fprintf(fid,'Physical Surface("inlet") = {219, 215};\n');
-fprintf(fid,'Physical Surface("outlet") = {211, 223};\n');
-fprintf(fid,'Physical Surface("airfoil") = {227};\n');
-%//Define physical volumes - numeric designations from GUI
-fprintf(fid,'Physical Volume("internal") = {1};\n');
-
-elseif GM_par.wtd == 3 
-%//Define physical surfaces - numeric designations from GUI
-fprintf(fid,'Physical Surface("back") = {233};\n');
-fprintf(fid,'Physical Surface("front") = {201};\n');
-%fprintf(fid,'Physical Surface("top") = {223};\n');
-%fprintf(fid,'Physical Surface("bottom") = {215};\n');
-fprintf(fid,'Physical Surface("inlet") = {220, 216};\n');
-fprintf(fid,'Physical Surface("outlet") = {212, 224};\n');
-fprintf(fid,'Physical Surface("airfoil") = {228, 232};\n');
-%//Define physical volumes - numeric designations from GUI
-fprintf(fid,'Physical Volume("internal") = {1};\n');
+    %//Define physical surfaces - numeric designations from GUI
+    fprintf(fid,'Physical Surface("back") = {228};\n');
+    fprintf(fid,'Physical Surface("front") = {201};\n');
+    fprintf(fid,'Physical Surface("inlet") = {219, 215};\n');
+    fprintf(fid,'Physical Surface("outlet") = {211, 223};\n');
+    fprintf(fid,'Physical Surface("airfoil") = {227};\n');
+    fprintf(fid,'Physical Volume("internal") = {1};\n');
+elseif GM_par.wtd == 3
+    %//Define physical surfaces - numeric designations from GUI
+    fprintf(fid,'Physical Surface("back") = {233};\n');
+    fprintf(fid,'Physical Surface("front") = {201};\n');
+    fprintf(fid,'Physical Surface("inlet") = {220, 216};\n');
+    fprintf(fid,'Physical Surface("outlet") = {212, 224};\n');
+    fprintf(fid,'Physical Surface("airfoil") = {228, 232};\n');
+    fprintf(fid,'Physical Volume("internal") = {1};\n');
 end
 
 fclose(fid);
 
 %% ACTUAL MESHING
-
 system(sprintf('touch %s/logmesh.txt',case_dir));
 
 % mesh
@@ -247,19 +241,15 @@ for j = 1:GM_par.nlay-1
     step = GM_par.nlay-j;
     thick_start = sum( ds1*exp_ratio.^([0:step]));
     thick_end   = sum( ds1*exp_ratio.^([0:step-1]));
-    
-%     thick_end
-%     thick_start
-%     
-%     ds1
-    
+   
     [status] = goGoOpenFOAM(sprintf('cd %s/20extrude && refineWallLayer -overwrite ''(airfoil)'' %1.3f >> ../logmesh.txt',...
         case_dir,thick_end/thick_start));
+    
 end
 
 
 if strcmp(SOLVER.solver,'simple')
-     [~,~] = system(sprintf('cp -r %s/20extrude/constant/polyMesh %s/30simple/constant/',case_dir,case_dir));
+    [~,~] = system(sprintf('cp -r %s/20extrude/constant/polyMesh %s/30simple/constant/',case_dir,case_dir));
 elseif strcmp(SOLVER.solver,'piso')
     [~,~] = system(sprintf('cp -r %s/20extrude/constant/polyMesh %s/40piso/constant/',case_dir,case_dir));
 else

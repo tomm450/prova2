@@ -1,4 +1,4 @@
-function [done] = refineModuleGmsh(method,method_par,fid,lastpoint)
+function [done] = refineModuleGmsh(method,method_par,fid,lastpoint,l_airfoil,x_dom)
 
 switch lower(method)
     case {'none'}
@@ -74,7 +74,71 @@ switch lower(method)
         fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+w+1,l_airfoil/5);
         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+w+1);
         done = 1;
-    
+        
+    case 'wake'
+        
+%       posizione verticale centro raccordo
+%       y_c = method_par{1};
+%       altezza scia all'outlet
+%       y_w = method_par{2};
+%       raggio raccordo 
+%       r   = method_par{3};
+%       lunghezza elementi
+%       l_w = method_par{4};
+        
+        y_c = method_par{1};
+        y_w = method_par{2};
+        r   = method_par{3};
+        l_w = method_par{4};
+        
+        
+        K = 2/3;
+        if r > y_w 
+            error('r > y_w poco senso per alpha positiva\n')
+        end
+        
+        a1 = atan2(y_w-r,K*x_dom);
+                
+
+        clock_angle = linspace(3/2*pi,pi/2+a1,24);
+        clock_angle = clock_angle(2:end-1);
+        
+        % segmento basso
+        x_sb = linspace(K*x_dom,0,25);
+        y_sb = -r*ones(size(x_sb));
+        
+        x_sb = x_sb(2:end); y_sb = y_sb(2:end);
+        
+        x_rac = r*cos(clock_angle(1:end-1));
+        y_rac = r*sin(clock_angle(1:end-1));
+        
+        x_sa = linspace(r*cos(clock_angle(end)),K*x_dom,25);
+        
+        % actual y_wake 
+        ayw = r*sin(clock_angle(end)) + (K*x_dom + r*sin(a1))*sin(a1);
+        y_sa = linspace(r*sin(clock_angle(end)),ayw,25);
+        
+        x_sa = x_sa(1:end-1); y_sa = y_sa(1:end-1);
+        
+        PXY = [x_sb,x_rac,x_sa;...
+               y_sb,y_rac,y_sa];
+              
+        
+        for w = 1:size(PXY,2)
+                       
+                lastpoint = lastpoint +1;
+                fprintf(fid,'Point(%d) = { %f,  0.0000000,  %f,  %f};\n',lastpoint,PXY(1,w),...
+                    y_c+PXY(2,w),l_w);
+                fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+            
+        end
+
+        fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint+1,l_airfoil/5);
+        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+1);
+        fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+1+1,l_airfoil/5);
+        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+1+1);
+        done = 1;
+        
     otherwise
         
         error('Unknown refining method.')

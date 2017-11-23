@@ -98,6 +98,7 @@ end
 
 fprintf('\nmesh in %f min \n\n',crono(1));
 
+sdeng
 %% SCRIVO DICT
 tstart = tic;
 bu_type = BU_par.BU_type;  % 'freestream';
