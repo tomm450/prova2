@@ -8,11 +8,11 @@ my_dir  = my_dir.path;
 my_dirs = genpath(my_dir);
 addpath(my_dirs);
 
-%Parameters.gmsh_cmd     = 'gmsh';             % fisso
-Parameters.gmsh_cmd     = '~/Documents/gmsh'; % portatile
+Parameters.gmsh_cmd     = 'gmsh';             % fisso
+%Parameters.gmsh_cmd     = '~/Documents/gmsh'; % portatile
 % winner geometry
 IN = [50 250 50 250 50 2 0.02 0.03];
-Parameters.n_processori = 3;
+Parameters.n_processori = 8;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % INPUT UTENTE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -79,7 +79,7 @@ GM_par.x_dom     = x_dom;
 % %
 GM_par.l_dom     = GM_par.x_dom/(2*n_cell_ff);
 GM_par.expRatio  = expRatio;
-GM_par.l_airfoil_v = [0.002]% 0.005 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
+GM_par.l_airfoil_v = [0.001]% 0.005 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
 %GM_par.l_slat    = 0.0008;%GM_par.l_dom/5000;%0.001;
 GM_par.Fstruct   = 1;
 GM_par.Fquad     = 1;
@@ -114,7 +114,7 @@ GM_par.Fquad     = 1;
 %       l_w = method_par{4};
 
 GM_par.ref_method = 'wake';
-GM_par.par_method = {0.5,2,1,0.01};
+GM_par.par_method = {0.5,2,1,0.05};
 MESH_par = GM_par;
 
 % % OPENFOAM

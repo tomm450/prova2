@@ -104,7 +104,7 @@ tstart = tic;
 bu_type = BU_par.BU_type;  % 'freestream';
 
 if strcmp(SOLVER.solver,'simple')
-    [done] = BC_Write('piso',BU_par,bu_type,case_dir );
+    [done] = BC_Write('simple',BU_par,bu_type,case_dir );
     [done] = komega(k_inlet,omega_inlet,case_dir,SOLVER);
     fprintf('decompose\ncd %s/30simple/ && decomposePar -force > ../3logdec.txt\n',case_dir);
     [done] = goGoOpenFOAM(sprintf('cd %s/30simple/ && decomposePar -force > ../3logdec.txt',case_dir));
@@ -176,112 +176,112 @@ system(sprintf('cd %s && tail -n +2 %d0.csv > %dc.csv',case_folder,ID,ID));
 
 air_mat = csvread(sprintf('%s/%dc.csv',case_folder,ID));
 
-
-cd = load('current_design.mat');
-
-LE_air = [cd.xp(1,0.5*(size(cd.xp,2)+1)); cd.yp(1,0.5*(size(cd.xp,2)+1))];
-LE_sla = [cd.xp(2,0.5*(size(cd.xp,2)+1)); cd.yp(2,0.5*(size(cd.xp,2)+1))];
-
-TE_air = [cd.xp(1,1); cd.yp(1,1)];
-TE_sla = [cd.xp(2,1); cd.yp(2,1)];
-
-XZ = [air_mat(:,8),air_mat(:,10)];
-
-TGT = [LE_air,TE_air,LE_sla,TE_sla];
-
-for k = 1:size(TGT,2)
-    err2 = (XZ(:,1) - TGT(1,k)).^2 + (XZ(:,2) - TGT(2,k)).^2;
-    
-    [err2,imin] = min(abs(err2));
-    
-    tgt(k) = imin;
-    XZ = [XZ(1:imin-1,:);XZ(imin+1:end,:)];
-    air_mat = [air_mat(1:imin-1,:);air_mat(imin+1:end,:)];
-end
-
-punti_dorso_air = [];
-punti_ventre_air = [];
-punti_dorso_slat = [];
-punti_ventre_slat = [];
-
-pps = 0.5*(size(cd.xp,2)+1);
-ventre_air = [cd.xp(1,2:pps-1);
-              cd.yp(1,2:pps-1)]; 
-          
-dorso_air  = [cd.xp(1,pps+1:end);
-              cd.yp(1,pps+1:end)];
-
-ventre_slat = [cd.xp(2,2:pps-1);
-               cd.yp(2,2:pps-1)]; 
-          
-dorso_slat  = [cd.xp(2,pps+1:end);
-               cd.yp(2,pps+1:end)];
-                  
-for i = 1:size(air_mat,1)
-      
-    [yp1] = spline(ventre_air(1,:) ,ventre_air(2,:) ,air_mat(i,8));
-    [yp2] = spline(dorso_air(1,:)  ,dorso_air(2,:)  ,air_mat(i,8));
-    [yp3] = spline(ventre_slat(1,:),ventre_slat(2,:),air_mat(i,8));
-    [yp4] = spline(dorso_slat(1,:) ,dorso_slat(2,:) ,air_mat(i,8));
-       
-    [err,imin] = min(abs([yp1;yp2;yp3;yp4] - ones(4,1)*air_mat(i,10)));
-        
-    if imin == 1
-        punti_ventre_air = [punti_ventre_air; air_mat(i,:)];
-    elseif imin == 2
-        punti_dorso_air = [punti_dorso_air; air_mat(i,:)];
-    elseif imin == 3
-        punti_ventre_slat = [punti_ventre_slat; air_mat(i,:)];
-    elseif imin == 4
-        punti_dorso_slat = [punti_dorso_slat; air_mat(i,:)];
-    end
-    
-end
-
-[~,idx] = sort(punti_ventre_air(:,8)); % sort just the first column
-punti_ventre_air = punti_ventre_air(idx,:);   % sort the whole matrix using the sort indices
-
-[~,idx] = sort(punti_dorso_air(:,8)); % sort just the first column
-punti_dorso_air = punti_dorso_air(idx,:);   % sort the whole matrix using the sort indices
-
-[~,idx] = sort(punti_ventre_slat(:,8)); % sort just the first column
-punti_ventre_slat = punti_ventre_slat(idx,:);   % sort the whole matrix using the sort indices
-
-[~,idx] = sort(punti_dorso_slat(:,8)); % sort just the first column
-punti_dorso_slat = punti_dorso_slat(idx,:);   % sort the whole matrix using the sort indic
-
-% reinterpolo sui punti noti da metodo course
-x_ventre_air = fliplr(xc(1,1:(size(xc,2)/2)));
-x_dorso_air  = xc(1,(size(xc,2)/2)+1:end);
-
-CP_va = spline(punti_ventre_air(:,8),punti_ventre_air(:,7),x_ventre_air);
-CP_da = spline(punti_dorso_air(:,8),punti_dorso_air(:,7),x_dorso_air);
-
-% figure
-% plot(punti_ventre_air(:,8),punti_ventre_air(:,7)/(0.5*BU_par.Umag^2),'b'); 
-% hold on
-% plot(punti_dorso_air(:,8),punti_dorso_air(:,7)/(0.5*BU_par.Umag^2),'r'); 
-% plot(x_ventre_air,CP_va/(0.5*BU_par.Umag^2),'bo');
-% plot(x_dorso_air,CP_da/(0.5*BU_par.Umag^2),'ro');
-
-cp = [fliplr(CP_va),CP_da];
-
-x_ventre_slat = fliplr(xc(2,1:(size(xc,2)/2)));
-x_dorso_slat  = xc(2,(size(xc,2)/2)+1:end);
-
-CP_vs = spline(punti_ventre_slat(:,8),punti_ventre_slat(:,7),x_ventre_slat);
-CP_ds = spline(punti_dorso_slat(:,8),punti_dorso_slat(:,7),x_dorso_slat);
-
-% plot(punti_ventre_slat(:,8),punti_ventre_slat(:,7)/(0.5*BU_par.Umag^2),'b'); 
-% hold on
-% plot(punti_dorso_slat(:,8),punti_dorso_slat(:,7)/(0.5*BU_par.Umag^2),'r'); 
-% plot(x_ventre_slat,CP_vs/(0.5*BU_par.Umag^2),'bo');
-% plot(x_dorso_slat,CP_ds/(0.5*BU_par.Umag^2),'bo');
-
-
-cp = [cp,fliplr(CP_vs),CP_ds]/(0.5*BU_par.Umag^2);
-cp = cp';
-
+% %% per calibrazione commentare
+% cd = load('current_design.mat');
+% 
+% LE_air = [cd.xp(1,0.5*(size(cd.xp,2)+1)); cd.yp(1,0.5*(size(cd.xp,2)+1))];
+% LE_sla = [cd.xp(2,0.5*(size(cd.xp,2)+1)); cd.yp(2,0.5*(size(cd.xp,2)+1))];
+% 
+% TE_air = [cd.xp(1,1); cd.yp(1,1)];
+% TE_sla = [cd.xp(2,1); cd.yp(2,1)];
+% 
+% XZ = [air_mat(:,8),air_mat(:,10)];
+% 
+% TGT = [LE_air,TE_air,LE_sla,TE_sla];
+% 
+% for k = 1:size(TGT,2)
+%     err2 = (XZ(:,1) - TGT(1,k)).^2 + (XZ(:,2) - TGT(2,k)).^2;
+%     
+%     [err2,imin] = min(abs(err2));
+%     
+%     tgt(k) = imin;
+%     XZ = [XZ(1:imin-1,:);XZ(imin+1:end,:)];
+%     air_mat = [air_mat(1:imin-1,:);air_mat(imin+1:end,:)];
+% end
+% 
+% punti_dorso_air = [];
+% punti_ventre_air = [];
+% punti_dorso_slat = [];
+% punti_ventre_slat = [];
+% 
+% pps = 0.5*(size(cd.xp,2)+1);
+% ventre_air = [cd.xp(1,2:pps-1);
+%               cd.yp(1,2:pps-1)]; 
+%           
+% dorso_air  = [cd.xp(1,pps+1:end);
+%               cd.yp(1,pps+1:end)];
+% 
+% ventre_slat = [cd.xp(2,2:pps-1);
+%                cd.yp(2,2:pps-1)]; 
+%           
+% dorso_slat  = [cd.xp(2,pps+1:end);
+%                cd.yp(2,pps+1:end)];
+%                   
+% for i = 1:size(air_mat,1)
+%       
+%     [yp1] = spline(ventre_air(1,:) ,ventre_air(2,:) ,air_mat(i,8));
+%     [yp2] = spline(dorso_air(1,:)  ,dorso_air(2,:)  ,air_mat(i,8));
+%     [yp3] = spline(ventre_slat(1,:),ventre_slat(2,:),air_mat(i,8));
+%     [yp4] = spline(dorso_slat(1,:) ,dorso_slat(2,:) ,air_mat(i,8));
+%        
+%     [err,imin] = min(abs([yp1;yp2;yp3;yp4] - ones(4,1)*air_mat(i,10)));
+%         
+%     if imin == 1
+%         punti_ventre_air = [punti_ventre_air; air_mat(i,:)];
+%     elseif imin == 2
+%         punti_dorso_air = [punti_dorso_air; air_mat(i,:)];
+%     elseif imin == 3
+%         punti_ventre_slat = [punti_ventre_slat; air_mat(i,:)];
+%     elseif imin == 4
+%         punti_dorso_slat = [punti_dorso_slat; air_mat(i,:)];
+%     end
+%     
+% end
+% 
+% [~,idx] = sort(punti_ventre_air(:,8)); % sort just the first column
+% punti_ventre_air = punti_ventre_air(idx,:);   % sort the whole matrix using the sort indices
+% 
+% [~,idx] = sort(punti_dorso_air(:,8)); % sort just the first column
+% punti_dorso_air = punti_dorso_air(idx,:);   % sort the whole matrix using the sort indices
+% 
+% [~,idx] = sort(punti_ventre_slat(:,8)); % sort just the first column
+% punti_ventre_slat = punti_ventre_slat(idx,:);   % sort the whole matrix using the sort indices
+% 
+% [~,idx] = sort(punti_dorso_slat(:,8)); % sort just the first column
+% punti_dorso_slat = punti_dorso_slat(idx,:);   % sort the whole matrix using the sort indic
+% 
+% % reinterpolo sui punti noti da metodo course
+% x_ventre_air = fliplr(xc(1,1:(size(xc,2)/2)));
+% x_dorso_air  = xc(1,(size(xc,2)/2)+1:end);
+% 
+% CP_va = spline(punti_ventre_air(:,8),punti_ventre_air(:,7),x_ventre_air);
+% CP_da = spline(punti_dorso_air(:,8),punti_dorso_air(:,7),x_dorso_air);
+% 
+% % figure
+% % plot(punti_ventre_air(:,8),punti_ventre_air(:,7)/(0.5*BU_par.Umag^2),'b'); 
+% % hold on
+% % plot(punti_dorso_air(:,8),punti_dorso_air(:,7)/(0.5*BU_par.Umag^2),'r'); 
+% % plot(x_ventre_air,CP_va/(0.5*BU_par.Umag^2),'bo');
+% % plot(x_dorso_air,CP_da/(0.5*BU_par.Umag^2),'ro');
+% 
+% cp = [fliplr(CP_va),CP_da];
+% 
+% x_ventre_slat = fliplr(xc(2,1:(size(xc,2)/2)));
+% x_dorso_slat  = xc(2,(size(xc,2)/2)+1:end);
+% 
+% CP_vs = spline(punti_ventre_slat(:,8),punti_ventre_slat(:,7),x_ventre_slat);
+% CP_ds = spline(punti_dorso_slat(:,8),punti_dorso_slat(:,7),x_dorso_slat);
+% 
+% % plot(punti_ventre_slat(:,8),punti_ventre_slat(:,7)/(0.5*BU_par.Umag^2),'b'); 
+% % hold on
+% % plot(punti_dorso_slat(:,8),punti_dorso_slat(:,7)/(0.5*BU_par.Umag^2),'r'); 
+% % plot(x_ventre_slat,CP_vs/(0.5*BU_par.Umag^2),'bo');
+% % plot(x_dorso_slat,CP_ds/(0.5*BU_par.Umag^2),'bo');
+% 
+% 
+% cp = [cp,fliplr(CP_vs),CP_ds]/(0.5*BU_par.Umag^2);
+% cp = cp';
+cp = 'dummy';
 end
 %% FINE MAIN %%
     function result=goGoOpenFOAM(command)
