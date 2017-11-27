@@ -79,7 +79,7 @@ GM_par.x_dom     = x_dom;
 % %
 GM_par.l_dom     = GM_par.x_dom/(2*n_cell_ff);
 GM_par.expRatio  = expRatio;
-GM_par.l_airfoil_v = [0.008 0.005 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
+GM_par.l_airfoil_v = [0.005 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
 %GM_par.l_slat    = 0.0008;%GM_par.l_dom/5000;%0.001;
 GM_par.Fstruct   = 1;
 GM_par.Fquad     = 1;
@@ -114,6 +114,9 @@ GM_par.Fquad     = 1;
 %       lunghezza elementi
 %       l_w = method_par{4};
 
+GM_par.ref_method = 'wake';
+GM_par.par;_method = {0.5,2,1,10*GM_par.l_airfoil_v};
+MESH_par = GM_par
 
 % % OPENFOAM
 SOLVER.solver        = 'simple';
@@ -182,13 +185,9 @@ for i = 1:size(GM_par.l_airfoil_v,2)
     GM_par.l_airfoil = GM_par.l_airfoil_v(i);
     GM_par.l_slat    = GM_par.l_airfoil_v(i);
     
-    GM_par.ref_method = 'wake';
-    GM_par.par_method = {0.5,2,1,10*GM_par.l_airfoil_v(i)};
-    MESH_par = GM_par;
-    
     MESH_par = GM_par;
     CFD.MESH_par      = MESH_par;
-       
+    
     [cp_f{i}] = fCl_core(OPT.x0,IN,CFD,Parameters,xc);
 %     [CLf,CDf] = aeroCoeff( xc,dl,theta_G,cp_f,BU_par );
 %     

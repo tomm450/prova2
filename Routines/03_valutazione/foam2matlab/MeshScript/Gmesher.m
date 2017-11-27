@@ -208,8 +208,8 @@ system(sprintf('touch %s/logmesh.txt',case_dir));
 
 % mesh
 %if Parameters.n_processori == 1
-% [status] = goGoGmsh(sprintf('-3 -o %s/0msh/tom.msh %s/0msh/tom.geo > %s/logmesh.txt',case_dir,case_dir,case_dir),...
-%     Parameters.gmsh_cmd);
+ [status] = goGoGmsh(sprintf('-3 -o %s/0msh/tom.msh %s/0msh/tom.geo > %s/logmesh.txt',case_dir,case_dir,case_dir),...
+     Parameters.gmsh_cmd);
 % else
 % [status] = goGoGmsh(sprintf('-3 -o %s/0msh/tom.msh %s/0msh/tom.geo > %s/logmesh.txt',case_dir,case_dir,case_dir),...
 %     Parameters.gmsh_cmd,sprintf('mpirun -n %d ',Parameters.n_processori));

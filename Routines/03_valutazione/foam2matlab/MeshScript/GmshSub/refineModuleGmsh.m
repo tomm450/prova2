@@ -135,7 +135,7 @@ switch lower(method)
 
         fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint+1,l_airfoil/5);
         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+1);
-        fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+1+1,l_airfoil/5);
+        %fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+1+1,l_airfoil/5);
         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+1+1);
         done = 1;
         
