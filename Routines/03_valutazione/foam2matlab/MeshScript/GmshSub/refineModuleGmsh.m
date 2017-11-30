@@ -1,11 +1,15 @@
-function [done] = refineModuleGmsh(method,method_par,fid,lastpoint,l_airfoil,x_dom)
+function [lastpoint_new] = refineModuleGmsh(method,method_par,fid,lastpoint,l_airfoil,x_dom)
+
+% lastpoint è l'ultimo punto dichiarato nel file .geo
+% indice lastpoint+1
 
 switch lower(method)
     case {'none'}
         
-        done = 1;
+        lastpoint_new = lastpoint;
         
     case {'clock_simple'}
+        
         % 24 punti su circonferenza di raggio rref di dimensione lref
         rref = method_par{1};
         lref = method_par{2};
@@ -22,13 +26,23 @@ switch lower(method)
             
         end
         
-        w = 24;
-        fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint+w,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+w);
-        fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+w+1,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+w+1);
+        lastpoint = lastpoint +1;
+        fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil);
+        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
         
-        done = 1;
+                lastpoint = lastpoint +1;
+        fprintf(fid,'Point(%d) = { 1.001,  0.001000,  0,  %f};\n',lastpoint,l_airfoil);
+        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+        
+                lastpoint = lastpoint +1;
+        fprintf(fid,'Point(%d) = { 1.0001, -0.001000,  0,  %f};\n',lastpoint,l_airfoil);
+        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+        
+        lastpoint = lastpoint +1;
+        fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
+        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+        
+        lastpoint_new = lastpoint;
         
     case 'sublinear'
         
@@ -68,12 +82,15 @@ switch lower(method)
             
         end
         
-        w = 24;
-        fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint+w,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+w);
-        fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+w+1,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+w+1);
-        done = 1;
+        lastpoint = lastpoint +1;
+        fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
+        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+        
+        lastpoint = lastpoint +1;
+        fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
+        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+        
+        lastpoint_new = lastpoint;
         
     case 'wake'
         
@@ -137,7 +154,7 @@ switch lower(method)
         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+1);
         %fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+1+1,l_airfoil/5);
         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+1+1);
-        done = 1;
+        lastpoint_new = lastpoint;
         
     otherwise
         

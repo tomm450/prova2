@@ -9,7 +9,15 @@ my_dirs = genpath(my_dir);
 addpath(my_dirs);
 
 Parameters.gmsh_cmd     = 'gmsh';             % fisso
-%Parameters.gmsh_cmd     = '~/Documents/gmsh'; % portatile
+%Parameters.gmsh_cmd     = '/home/tom/Documents/gmsh'; % portatile
+
+if exist(Parameters.gmsh_cmd,'file')
+    % ok
+else 
+    error('percorso Gmsh non esiste')
+end
+
+
 % winner geometry
 IN = [50 250 50 250 50 2 0.02 0.03];
 Parameters.n_processori = 8;
@@ -79,7 +87,8 @@ GM_par.x_dom     = x_dom;
 % %
 GM_par.l_dom     = GM_par.x_dom/(2*n_cell_ff);
 GM_par.expRatio  = expRatio;
-GM_par.l_airfoil_v = [0.008 0.005 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
+GM_par.BL        = 1; % 0 = no; 1 = native; 2 = addlayer openFoam 
+GM_par.l_airfoil_v = [0.003 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
 %GM_par.l_slat    = 0.0008;%GM_par.l_dom/5000;%0.001;
 GM_par.Fstruct   = 1;
 GM_par.Fquad     = 1;
@@ -125,7 +134,6 @@ SOLVER.writeInterval = floor(SOLVER.endTime/25);
 %
 CFD.STL           = STL;
 CFD.BU_par        = BU_par;
-CFD.MESH_par      = MESH_par;
 CFD.SOLVER        = SOLVER;
 
 %% OPT parametri
@@ -181,9 +189,26 @@ for i = 1:size(GM_par.l_airfoil_v,2)
     xc = 'dummy';
     GM_par.l_airfoil = GM_par.l_airfoil_v(i);
     GM_par.l_slat    = GM_par.l_airfoil_v(i);
+    %     case {'clock_simple'}
+    %         % 24 punti su circonferenza di raggio rref di dimensione lref
+    %         rref = method_par{1};
+    %         lref = method_par{2};
+    %         nstaz = method_par{5};
+    %    case 'wake'
+    %       posizione verticale centro raccordo
+    %       y_c = method_par{1};
+    %       altezza scia all'outlet
+    %       y_w = method_par{2};
+    %       raggio raccordo
+    %       r   = method_par{3};
+    %       lunghezza elementi
+    %       l_w = method_par{4};
+    GM_par.ref_method = {'clock_simple','wake'};
     
-    GM_par.ref_method = 'wake';
-    GM_par.par_method = {0.5,2,1,10*GM_par.l_airfoil_v(i)};
+    GM_par.par_method{1} = {1,5*GM_par.l_airfoil_v(i)};
+    GM_par.par_method{2} = {0.5,2,2,50*GM_par.l_airfoil_v(i)};
+    
+       
     MESH_par = GM_par;
     
     MESH_par = GM_par;

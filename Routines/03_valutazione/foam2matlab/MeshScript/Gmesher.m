@@ -2,13 +2,44 @@ function [telapsed] = Gmesher(X_IN,IN,STL,GM_par,case_dir,Parameters,SOLVER)
 
 % genera mesh con gmsh, aggoinge i BL con refineLayer, estrude con
 % extrudeMesh e copia nella cartella simple
-
 l_airfoil = GM_par.l_airfoil;
 l_slat    = GM_par.l_slat;
 l_dom     = GM_par.l_dom;
 x_dom     = GM_par.x_dom;
 exp_ratio = GM_par.expRatio;
 ds1       = GM_par.ds1;
+
+
+if GM_par.BL > 0
+    % Calcolo layer
+    thick_cell_try = ds1*exp_ratio.^([0:50]);
+    
+    if GM_par.BL == 1 % native
+        
+        % BL non ha limiti come nel caso 2, transizione tc
+        % thick_cell(end)*exp_ratio = l_airfoil
+        
+        [thick_error,i_thick] = min(abs(thick_cell_try-l_airfoil/exp_ratio));
+        
+        GM_par.nlay = i_thick;
+        
+        thick_sum = sum(thick_cell_try(1:i_thick));
+        
+    elseif GM_par.BL == 2 % foam
+        
+        % BL si sviluppa dividendo prima cella
+        
+        for j = 1:max(size(thick_cell_try))
+            thick_sum_try(j) = sum(thick_cell_try(1:j));
+        end
+        
+        [thick_error,i_thick] = min(abs(thick_sum_try-l_airfoil));
+        
+        GM_par.nlay = i_thick;
+        
+    end
+    
+end
 
 
 % rref = GM_par.rref;
@@ -114,14 +145,17 @@ if GM_par.wtd == 0 || GM_par.wtd == 1
  
  fprintf(fid,'Spline(5) = {1:%d,1};\n',size(p,1));
  fprintf(fid,'Line Loop(102) = {5};\n');
-
+ 
+ bl_str      ='5';
  surf_string ='101, 102';
 
 elseif GM_par.wtd == 2 
 
  fprintf(fid,'Spline(6) = {%d:%d, %d};\n',pend1+1,pend,pend1+1);%,pend1+1);
  fprintf(fid,'Line Loop(103) = {6};\n');
- surf_string ='101, 103';
+ 
+ bl_str       ='6';
+  surf_string ='101, 103';
 
 elseif GM_par.wtd == 3 
     
@@ -130,7 +164,8 @@ elseif GM_par.wtd == 3
   
  fprintf(fid,'Line Loop(102) = {5};\n');
  fprintf(fid,'Line Loop(103) = {6};\n');
-
+ 
+ bl_str      ='5,6'; 
  surf_string ='101, 102, 103';
  
 end
@@ -152,6 +187,8 @@ if FAKE_struct == 1
 end
 
 %% REFINE MODULE
+
+for i = 1:max(size(GM_par.ref_method))
 % casi attualmente implementati
 %     case {'none'}
 %         method_par = {};
@@ -173,9 +210,10 @@ end
 %         % numero circonferenze da marchiare
 %         nstaz = method_par{5};
 
-[done] = refineModuleGmsh(GM_par.ref_method,GM_par.par_method,...
+[lastpoint] = refineModuleGmsh(GM_par.ref_method{i},GM_par.par_method{i},...
     fid,lastpoint,l_airfoil,x_dom);
 
+end
 %//Extrude unstructured far field mesh
 fprintf(fid,'Extrude {0, 1, 0} {\n');
 fprintf(fid,'Surface {201};\n');
@@ -199,6 +237,21 @@ elseif GM_par.wtd == 3
     fprintf(fid,'Physical Surface("outlet") = {212, 224};\n');
     fprintf(fid,'Physical Surface("airfoil") = {228, 232};\n');
     fprintf(fid,'Physical Volume("internal") = {1};\n');
+end
+
+if GM_par.BL == 1
+    
+    fprintf(fid,'Field[1] = BoundaryLayer;\n');
+    fprintf(fid,'Field[1].EdgesList = {%s};\n',bl_str);
+    fprintf(fid,'Field[1].hfar = %f;\n',       thick_cell_try(i_thick));
+    fprintf(fid,'Field[1].hwall_n = %f;\n',    thick_cell_try(1));
+    fprintf(fid,'Field[1].thickness = %f;\n',  thick_sum);
+    fprintf(fid,'Field[1].ratio = %f;\n',      exp_ratio);
+    fprintf(fid,'Field[1].AnisoMax = 1000;\n');
+    fprintf(fid,'Field[1].Quads = 1;\n');
+    fprintf(fid,'Field[1].IntersectMetrics = 0;\n');
+    fprintf(fid,'BoundaryLayer Field = 1; \n');
+        
 end
 
 fclose(fid);
@@ -231,25 +284,18 @@ system(sprintf('touch %s/logmesh.txt',case_dir));
 
 [status] = goGoOpenFOAM(sprintf('cd %s/20extrude && extrudeMesh >> ../logmesh.txt',case_dir));% && paraFoam');
 
-% % aggiungo layer
-thick_cell_try = ds1*exp_ratio.^([0:50]);
-for j = 1:max(size(thick_cell_try))
-    thick_sum_try(j) = sum(thick_cell_try(1:j));
-end
-
-[thick_error,i_thick] = min(abs(thick_sum_try-l_airfoil));
-
-GM_par.nlay = i_thick;
-
-for j = 1:GM_par.nlay-1
+if GM_par.BL == 2
     
-    step = GM_par.nlay-j;
-    thick_start = sum( ds1*exp_ratio.^([0:step]));
-    thick_end   = sum( ds1*exp_ratio.^([0:step-1]));
-   
-    [status] = goGoOpenFOAM(sprintf('cd %s/20extrude && refineWallLayer -overwrite ''(airfoil)'' %1.3f >> ../logmesh.txt',...
-        case_dir,thick_end/thick_start));
-    
+    for j = 1:GM_par.nlay-1
+        
+        step = GM_par.nlay-j;
+        thick_start = sum( ds1*exp_ratio.^([0:step]));
+        thick_end   = sum( ds1*exp_ratio.^([0:step-1]));
+        
+        [status] = goGoOpenFOAM(sprintf('cd %s/20extrude && refineWallLayer -overwrite ''(airfoil)'' %1.3f >> ../logmesh.txt',...
+            case_dir,thick_end/thick_start));
+        
+    end
 end
 
 
