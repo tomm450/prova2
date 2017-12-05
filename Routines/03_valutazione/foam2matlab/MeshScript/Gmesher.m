@@ -1,16 +1,18 @@
-function [telapsed] = Gmesher(X_IN,IN,STL,GM_par,case_dir,Parameters,SOLVER)
+function [telapsed] = Gmesher(X_IN,IN,STL,GM_par,case_dir,Parameters,SOLVER,SCALA)
 
 % genera mesh con gmsh, aggoinge i BL con refineLayer, estrude con
 % extrudeMesh e copia nella cartella simple
-l_airfoil = GM_par.l_airfoil;
-l_slat    = GM_par.l_slat;
-l_dom     = GM_par.l_dom;
-x_dom     = GM_par.x_dom;
+if nargin == 7
+SCALA = 1;
+end
+l_airfoil = SCALA*GM_par.l_airfoil;
+l_slat    = SCALA*GM_par.l_slat;
+l_dom     = SCALA*GM_par.l_dom;
+x_dom     = SCALA*GM_par.x_dom;
 exp_ratio = GM_par.expRatio;
-ds1       = GM_par.ds1;
+ds1       = SCALA*GM_par.ds1;
 
 
-if GM_par.BL > 0
     % Calcolo layer
     thick_cell_try = ds1*exp_ratio.^([0:50]);
     
@@ -36,10 +38,15 @@ if GM_par.BL > 0
         [thick_error,i_thick] = min(abs(thick_sum_try-l_airfoil));
         
         GM_par.nlay = i_thick;
+    
+    elseif GM_par.BL == 0 % foam     
+        
+        l_slat    = l_slat/l_airfoil*ds1;
+        l_airfoil = ds1;
         
     end
     
-end
+
 
 
 % rref = GM_par.rref;
@@ -66,29 +73,60 @@ l_slat_str    = 'l_s';
 l_dom_str     = 'l_d';
 x_dom_str     = 'x_d';
 
-if GM_par.wtd == 0
-    pu = Parameters.Airfoil.up(round(linspace(1,size(Parameters.Airfoil.up,1),10)),:);
-    pd = Parameters.Airfoil.dwn(round(linspace(1,size(Parameters.Airfoil.dwn,1),10)),:);
-    p = [flipud(pu(2:end,:));pd(1:end-1,:)]/1000;
-    %p = [p(1:5:end,:)];
-elseif GM_par.wtd == 1
-    p = [flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
-    %p = [p(1:5:end,:)];
-elseif GM_par.wtd == 2
-    psu = flipud(GEOM.slat_land_u)/1000; psu = psu(round(linspace(1,size(psu,1),150)),:);
-    psd = GEOM.slat_land_d/1000;         psd = psd(round(linspace(1,size(psd,1),150)),:);
-    
-    ps = [psu(1:end-1,:);psd(1:end-1,:)];
-elseif GM_par.wtd == 3
-    p = [flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
-    %p = [p(1:5:end,:)];
-    
-    psu = flipud(GEOM.slat_land_u)/1000; psu = psu(round(linspace(1,size(psu,1),150)),:);
-    psd = GEOM.slat_land_d/1000;         psd = psd(round(linspace(1,size(psd,1),150)),:);
-    
-    ps = [psu(1:end-1,:);psd(1:end-1,:)];
-end
+n_camp = 150;
 
+
+if GM_par.wtd == 0 % profilo base
+    
+    if max(size(Parameters.Airfoil.up)) >= n_camp
+        pu = Parameters.Airfoil.up(round(linspace(1,size(Parameters.Airfoil.up,1),n_camp)),:);
+    else
+        pu = Parameters.Airfoil.up;
+    end
+    
+    if max(size(Parameters.Airfoil.dwn)) >= n_camp        
+        pd = Parameters.Airfoil.dwn(round(linspace(1,size(Parameters.Airfoil.dwn,1),n_camp)),:);
+    else
+        pd = Parameters.Airfoil.dwn;
+    end
+    
+    p = SCALA*[flipud(pu(2:end,:));pd(1:end-1,:)]/1000;
+    
+elseif GM_par.wtd == 1 % profilo senza slat ( curva superiore differente)
+    
+    p = SCALA*[flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
+    
+elseif GM_par.wtd == 2 % solo slat
+                
+    psu = flipud(GEOM.slat_land_u)/1000; 
+    if max(size(psu)) >= n_camp
+        psu = psu(round(linspace(1,size(psu,1),n_camp)),:);
+    end
+    
+    psd = GEOM.slat_land_d/1000;
+    if max(size(psd)) >= n_camp
+        psd = psd(round(linspace(1,size(psd,1),n_camp)),:);
+    end
+    
+    ps = SCALA*[psu(1:end-1,:);psd(1:end-1,:)];
+
+elseif GM_par.wtd == 3 % tutto
+
+    p = SCALA*[flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
+        
+    psu = flipud(GEOM.slat_land_u)/1000; 
+    if max(size(psu)) >= n_camp
+        psu = psu(round(linspace(1,size(psu,1),n_camp)),:);
+    end
+    
+    psd = GEOM.slat_land_d/1000;
+    if max(size(psd)) >= n_camp
+        psd = psd(round(linspace(1,size(psd,1),n_camp)),:);
+    end
+    
+    ps = SCALA*[psu(1:end-1,:);psd(1:end-1,:)];
+    
+end
 
 fid = fopen(sprintf('%s/0msh/tom.geo',case_dir),'w+');
 fprintf(fid,'// MADE BY TOM\n');
@@ -101,11 +139,11 @@ fprintf(fid,'%s = %f; \n',x_dom_str,x_dom);
 if GM_par.wtd == 0 || GM_par.wtd == 1 || GM_par.wtd == 3
 
   for k = 1:size(p,1)
-      if p(k,1) < 0.1
-        fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %f};\n',k,p(k,1),p(k,2),l_airfoil/5);
-      else
+%       if p(k,1) < 0.1
+%         fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %f};\n',k,p(k,1),p(k,2),l_airfoil/5);
+%       else
         fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %s};\n',k,p(k,1),p(k,2),l_airfoil_str);
-      end
+%       end
   end
   pend1 = k;
 else
@@ -139,7 +177,6 @@ fprintf(fid,'Line(4) = {%d, %d};\n',pend+4,pend+1);
 %//Define foil spline and trailing edge
 %//Define bounding box outer boundary
 fprintf(fid,'Line Loop(101) = {1, 2, 3, 4};\n');
-
 
 if GM_par.wtd == 0 || GM_par.wtd == 1 
  
@@ -240,18 +277,73 @@ elseif GM_par.wtd == 3
 end
 
 if GM_par.BL == 1
-    
+    %hwall * ratio^(dist/hwall)
     fprintf(fid,'Field[1] = BoundaryLayer;\n');
-    fprintf(fid,'Field[1].EdgesList = {%s};\n',bl_str);
-    fprintf(fid,'Field[1].hfar = %f;\n',       thick_cell_try(i_thick));
-    fprintf(fid,'Field[1].hwall_n = %f;\n',    thick_cell_try(1));
-    fprintf(fid,'Field[1].thickness = %f;\n',  thick_sum);
-    fprintf(fid,'Field[1].ratio = %f;\n',      exp_ratio);
+    
+    %AnisoMax
+    %Threshold angle for creating a mesh fan in the boundary layer
+    %type: float
+    %default value: 10000000000
     fprintf(fid,'Field[1].AnisoMax = 1000;\n');
-    fprintf(fid,'Field[1].Quads = 1;\n');
+    
+    %EdgesList
+    %Indices of curves in the geometric model for which a boundary layer
+    %is needed
+    %type: list
+    %default value: {}
+    fprintf(fid,'Field[1].EdgesList = {%s};\n',bl_str);
+    
+    %FanNodesList
+    %Indices of vertices in the geometric model for which a fan is created
+    %type: list
+    %default value: {}
+    
+    %IntersectMetrics
+    %Intersect metrics of all faces
+    %type: integer
+    %default value: 0
     fprintf(fid,'Field[1].IntersectMetrics = 0;\n');
+    
+    %NodesList
+    %Indices of vertices in the geometric model for which a BL ends
+    %type: list
+    %default value: {}
+    
+    
+    %Quads Generate recombined elements in the boundary layer
+    %type: integer
+    %default value: 0
+    fprintf(fid,'Field[1].Quads = 1;\n');
+    
+    %hfar Element size far from the wall
+    %type: float
+    %default value: 1
+    fprintf(fid,'Field[1].hfar = %f;\n',       thick_cell_try(i_thick));
+    
+    %hwall_n Mesh Size Normal to the The Wall
+    %type: float
+    %default value: 0.1
+    fprintf(fid,'Field[1].hwall_n = %f;\n',    thick_cell_try(1));
+    
+    %hwall_n_nodes
+    %Mesh Size Normal to the The Wall at nodes (overwrite hwall n
+    %when defined)
+    %type: list double
+    %default value: {}
+    
+    %ratio
+    %Size Ratio Between Two Successive Layers
+    %type: float
+    %default value: 1.1
+    fprintf(fid,'Field[1].ratio = %f;\n',      exp_ratio);
+    
+    %thickness
+    %Maximal thickness of the boundary layer
+    %type: float
+    %default value: 0.01
+    fprintf(fid,'Field[1].thickness = %f;\n',  thick_sum);
     fprintf(fid,'BoundaryLayer Field = 1; \n');
-        
+    
 end
 
 fclose(fid);
@@ -307,7 +399,7 @@ else
     error('someway,somewhere,someone fuck up');
 end
 
-
+[pos_win,pos_move] = system(sprintf('cp *.pos %s/',case_dir));
 
 telapsed = toc(tstart);
 

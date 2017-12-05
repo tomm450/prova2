@@ -8,9 +8,9 @@ my_dir  = my_dir.path;
 my_dirs = genpath(my_dir);
 addpath(my_dirs);
 
-%Parameters.gmsh_cmd     = '/usr/bin/gmsh';             % fisso
-Parameters.gmsh_cmd     = '/home/tom/Documents/gmsh'; % portatile
-
+Parameters.gmsh_cmd     = '/usr/bin/gmsh';             % fisso
+%Parameters.gmsh_cmd     = '/home/tom/Documents/gmsh'; % portatile
+Parameters.n_processori = 8;
 if exist(Parameters.gmsh_cmd,'file')
     % ok
 else 
@@ -20,7 +20,7 @@ end
 % winner geometry
 IN = [50 250 50 250 50 2 0.02 0.03];
 
-Parameters.n_processori = 2;
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % INPUT UTENTE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -59,7 +59,7 @@ Parameters.HSA.npane = 100;
 %% BOUNDARY CONDITION
 BU_par.Umag  = 135;         %m/s
 BU_par.p     = 0;
-%
+
 BU_par.BU_type = 'freestream';%{'freestream','fixedValue'}; %%%%
 
 BU_par.L    = 1;          %m
@@ -78,7 +78,9 @@ BU_par.extrusion_Thickness = 0.05; %m
 %% MODELLO CFD
 STL.point_txt     = 'NACA64212at.txt';
 
-% mesher Gmsh o snappyHexMesh
+% mesher Gmsh o snappyHexMesh 
+
+% grandezze in unità di corda
 x_dom     = 20; % semilato quadrato
 % %n_cell_ff =  10; % numero celle su semilato
 expRatio  = 1.3;
@@ -91,8 +93,9 @@ GM_par.x_dom     = x_dom;
 % %
 GM_par.l_dom     = GM_par.x_dom/(2*n_cell_ff);
 GM_par.expRatio  = expRatio;
-GM_par.BL        = 1; % 0 = no; 1 = native; 2 = addlayer openFoam 
-GM_par.l_airfoil_v = [0.0002];%GM_par.l_dom/5000;%0.002;
+GM_par.BL        = 0; % 0 = no; 1 = native; 2 = addlayer openFoam 
+GM_par.l_airfoil_v = 0.0002;
+
 %GM_par.l_slat    = 0.0008;%GM_par.l_dom/5000;%0.001;
 GM_par.Fstruct   = 0;
 GM_par.Fquad     = 1;
@@ -206,12 +209,12 @@ for i = 1:size(GM_par.l_airfoil_v,2)
     %       r   = method_par{3};
     %       lunghezza elementi
     %       l_w = method_par{4};
-    GM_par.ref_method = {'none'};
-    GM_par.par_method = {0};
-%    GM_par.ref_method = {'clock_simple','wake'};
+%     GM_par.ref_method = {'none'};
+%     GM_par.par_method = {0};
+    GM_par.ref_method = {'clock_simple','wake'};
     
-%     GM_par.par_method{1} = {1,5*GM_par.l_airfoil_v(i)};
-%     GM_par.par_method{2} = {0.5,2,2,50*GM_par.l_airfoil_v(i)};
+     GM_par.par_method{1} = {1,5*GM_par.l_airfoil_v(i)};
+     GM_par.par_method{2} = {0.5,2,2,50*GM_par.l_airfoil_v(i)};
     
        
     MESH_par     = GM_par;

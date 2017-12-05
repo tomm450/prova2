@@ -31,6 +31,7 @@ fprintf(fid,'    location    "system"; \n');
 fprintf(fid,'    object      controlDict; \n');
 fprintf(fid,'} \n');
 fprintf(fid,'// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * // \n');
+
 if strcmp(solver,'simple') == 1
   fprintf(fid,'application     simpleFoam; \n');
 elseif strcmp(solver,'piso') == 1

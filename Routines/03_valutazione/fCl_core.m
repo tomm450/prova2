@@ -42,27 +42,25 @@ Ufric = sqrt(Tao./BU_par.Rho);
 if BU_par.wall_function == 1
     yplus_tgt = 50;  % uso wall function
     MESH_par.ds1 = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
-
+    
 else
     yplus_tgt = 1;
-    MESH_par.ds1 = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
+    MESH_par.ds1      = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
     BU_par.omega_body = 6*BU_par.Nu/(0.075*(MESH_par.ds1)^2);
 end
 
-
 % calcolo valori inlet
+%k_inlet     = 3/2*(BU_par.Umag*0.05)^2; % https://www.cfd-online.com/Forums/openfoam/67728-help-k-epsilon-values-turbulence.html
 k_inlet     = 1e-3*BU_par.Umag^2/Re;
+
+%omega_inlet = 5*BU_par.Umag/(BU_par.L);
 omega_inlet = 5*BU_par.Umag/(2*MESH_par.x_dom);
 %%
-
-
-
-
 Dmean = MESH_par.l_airfoil;
 
 [~,nlay] = min(abs(Dmean - (MESH_par.ds1*MESH_par.expRatio.^[1:50])));
 
-MESH_par.nlay = nlay-1;
+MESH_par.nlay   = nlay-1;
 MESH_par.th_tot = sum(MESH_par.ds1*MESH_par.expRatio.^(nlay-1));
 
 crono = [];
@@ -74,11 +72,11 @@ np = Parameters.n_processori;
 [done] = decomposeWrite(np,case_dir,SOLVER);
 
 if strcmp(SOLVER.solver,'simple')
-    
+     system(sprintf('rm -r ./Cases_folder/%d/40piso',ID));
      [done] = controlWrite('simple',BU_par,SOLVER,case_dir);
      
 elseif strcmp(SOLVER.solver,'piso')
-    
+    system(sprintf('rm -r ./Cases_folder/%d/30simple',ID));
     disp('DEROGA SU dt, ricorreggere!')
     
      %CFL_exp = 3*U_mag*deltaT/deltaX 
@@ -100,7 +98,7 @@ fprintf('\nMESH... \n')
 
 if MESH_par.solver == 'gmsh'
     tstart = tic;
-    [~] = Gmesher(X_IN,IN,STL,MESH_par,case_dir,Parameters,SOLVER);
+    [~] = Gmesher(X_IN,IN,STL,MESH_par,case_dir,Parameters,SOLVER,BU_par.L);
     crono(1) = toc(tstart)/60;
 elseif MESH_par.solver == 'snap'
     [ done,crono ] = Snapper( X_IN,IN,STL,MESH_par,case_dir,Parameters );
