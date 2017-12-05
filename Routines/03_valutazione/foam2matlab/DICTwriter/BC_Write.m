@@ -76,10 +76,6 @@ fprintf(fid,'    airfoil \n');
 fprintf(fid,'    { \n');
 fprintf(fid,'        type            noSlip; \n');
 fprintf(fid,'    } \n');
-fprintf(fid,'    slat \n');
-fprintf(fid,'    { \n');
-fprintf(fid,'        type            noSlip; \n');
-fprintf(fid,'    } \n');
 
 fprintf(fid,'} \n');
 fprintf(fid,'// ************************************************************************* // \n');
@@ -147,10 +143,7 @@ fprintf(fid,'    airfoil\n');
 fprintf(fid,'    {\n');
 fprintf(fid,'          type            zeroGradient;\n');
 fprintf(fid,'    }\n');
-fprintf(fid,'    slat\n');
-fprintf(fid,'    {\n');
-fprintf(fid,'          type            zeroGradient;\n');
-fprintf(fid,'    }\n');
+
 fprintf(fid,'  }\n');
 
 fprintf(fid,'  // ************************************************************************* //\n');

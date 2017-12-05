@@ -30,17 +30,17 @@ switch lower(method)
         fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil);
         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
         
-                lastpoint = lastpoint +1;
-        fprintf(fid,'Point(%d) = { 1.001,  0.001000,  0,  %f};\n',lastpoint,l_airfoil);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
-        
-                lastpoint = lastpoint +1;
-        fprintf(fid,'Point(%d) = { 1.0001, -0.001000,  0,  %f};\n',lastpoint,l_airfoil);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
-        
-        lastpoint = lastpoint +1;
-        fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { 1.001,  0.001000,  0,  %f};\n',lastpoint,l_airfoil);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+%         
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { 1.0001, -0.001000,  0,  %f};\n',lastpoint,l_airfoil);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+%         
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
         
         lastpoint_new = lastpoint;
         
@@ -82,13 +82,18 @@ switch lower(method)
             
         end
         
-        lastpoint = lastpoint +1;
-        fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
-        
-        lastpoint = lastpoint +1;
-        fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { 1.001,  0.001000,  0,  %f};\n',lastpoint,l_airfoil);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+%         
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { 1.0001, -0.001000,  0,  %f};\n',lastpoint,l_airfoil);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+%         
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+
         
         lastpoint_new = lastpoint;
         
@@ -150,10 +155,18 @@ switch lower(method)
             
         end
 
-        fprintf(fid,'Point(%d) = { 1.001,  0.0000000,  0,  %f};\n',lastpoint+1,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+1);
-        %fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint+1+1,l_airfoil/5);
-        fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint+1+1);
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { 1.001,  0.001000,  0,  %f};\n',lastpoint,l_airfoil);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+%         
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { 1.0001, -0.001000,  0,  %f};\n',lastpoint,l_airfoil);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+%         
+%         lastpoint = lastpoint +1;
+%         fprintf(fid,'Point(%d) = { -0.001,  0.0000000,  0,  %f};\n',lastpoint,l_airfoil/5);
+%         fprintf(fid,'Point{%d} In Surface{201};\n',lastpoint);
+
         lastpoint_new = lastpoint;
         
     otherwise

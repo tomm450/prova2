@@ -20,7 +20,6 @@ else
 end
 
 % creo caso
-
 system(sprintf('cp -r ./CLEAN_CASE ./Cases_folder/%d',ID));
 
 case_dir = sprintf('./Cases_folder/%d',ID);
@@ -34,18 +33,30 @@ fprintf('CASO #%d\n',ID);
 fprintf(fid,'%d',ID+1);
 fclose(fid);
 %% calcoli preliminari
-yplus_tgt = 50;
-
 Re    = BU_par.Rho*BU_par.L*BU_par.Umag/BU_par.Nu;
 Cf    = 0.025/(Re^(1/7));
 Tao   = 0.5*Cf*BU_par.Rho*BU_par.Umag^2;
 Ufric = sqrt(Tao./BU_par.Rho);
 
+% y+ voluta
+if BU_par.wall_function == 1
+    yplus_tgt = 50;  % uso wall function
+    MESH_par.ds1 = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
+
+else
+    yplus_tgt = 1;
+    MESH_par.ds1 = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
+    BU_par.omega_body = 6*BU_par.Nu/(0.075*(MESH_par.ds1)^2);
+end
+
+
 % calcolo valori inlet
 k_inlet     = 1e-3*BU_par.Umag^2/Re;
 omega_inlet = 5*BU_par.Umag/(2*MESH_par.x_dom);
+%%
 
-MESH_par.ds1 = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
+
+
 
 Dmean = MESH_par.l_airfoil;
 
@@ -54,17 +65,18 @@ Dmean = MESH_par.l_airfoil;
 MESH_par.nlay = nlay-1;
 MESH_par.th_tot = sum(MESH_par.ds1*MESH_par.expRatio.^(nlay-1));
 
-
 crono = [];
 
 np = Parameters.n_processori;
 
-
 %% SCRIVO DICT
+
 [done] = decomposeWrite(np,case_dir,SOLVER);
 
 if strcmp(SOLVER.solver,'simple')
+    
      [done] = controlWrite('simple',BU_par,SOLVER,case_dir);
+     
 elseif strcmp(SOLVER.solver,'piso')
     
     disp('DEROGA SU dt, ricorreggere!')
@@ -73,14 +85,12 @@ elseif strcmp(SOLVER.solver,'piso')
      SOLVERmod.deltaT        = 1*Dmean/(200*BU_par.Umag);
      SOLVERmod.startTime     = 0;
      SOLVERmod.endTime       = SOLVER.endTime*SOLVERmod.deltaT;
-%      
+      
      SOLVERmod.writeInterval = floor(SOLVER.endTime/100);
      
      fprintf('deltaT = %f \nfinalT = %f \n\n',SOLVERmod.deltaT,SOLVERmod.endTime);
      
      [done] = controlWrite('piso',BU_par,SOLVERmod,case_dir);
-     
-     
      
 else
     error('someway,somewhere,someone fuck up');
@@ -96,27 +106,27 @@ elseif MESH_par.solver == 'snap'
     [ done,crono ] = Snapper( X_IN,IN,STL,MESH_par,case_dir,Parameters );
 end
 
-fprintf('\nmesh in %f min \n\n',crono(1));
-
+fprintf('\nMesh in %f min \n\n',crono(1));
 
 %% SCRIVO DICT
 tstart = tic;
 bu_type = BU_par.BU_type;  % 'freestream';
 
 if strcmp(SOLVER.solver,'simple')
+    
     [done] = BC_Write('simple',BU_par,bu_type,case_dir );
-    [done] = komega(k_inlet,omega_inlet,case_dir,SOLVER);
+    [done] = komega(k_inlet,omega_inlet,case_dir,SOLVER,BU_par);
     fprintf('decompose\ncd %s/30simple/ && decomposePar -force > ../3logdec.txt\n',case_dir);
     [done] = goGoOpenFOAM(sprintf('cd %s/30simple/ && decomposePar -force > ../3logdec.txt',case_dir));
     fprintf('simple\ncd %s/30simple/ && mpirun -n %d simpleFoam -parallel > ../3logFoam.txt \n',case_dir,Parameters.n_processori)
     [done] = goGoOpenFOAM(sprintf('cd %s/30simple/ && mpirun -n %d simpleFoam -parallel > ../3logFoam.txt ',case_dir,Parameters.n_processori));
     fprintf('reconstructPar \ncd %s/30simple/ && reconstructPar -latestTime > ../3logrec.txt\n',case_dir);
     [done] = goGoOpenFOAM(sprintf('cd %s/30simple/ && reconstructPar -latestTime > ../3logrec.txt',case_dir));
-elseif strcmp(SOLVER.solver,'piso')
     
-       
+elseif strcmp(SOLVER.solver,'piso')
+           
     [done] = BC_Write('piso',BU_par,bu_type,case_dir );
-    [done] = komega(k_inlet,omega_inlet,case_dir,SOLVER);
+    [done] = komega(k_inlet,omega_inlet,case_dir,SOLVER,BU_par);
     fprintf('decompose\ncd %s/40piso/ && decomposePar -force > ../3logdec.txt\n',case_dir);
     [done] = goGoOpenFOAM(sprintf('cd %s/40piso/ && decomposePar -force > ../3logdec.txt',case_dir));
     fprintf('simple\ncd %s/40piso/ && mpirun -n %d simpleFoam -parallel > ../3logFoam.txt \n',case_dir,Parameters.n_processori)

@@ -8,8 +8,8 @@ my_dir  = my_dir.path;
 my_dirs = genpath(my_dir);
 addpath(my_dirs);
 
-Parameters.gmsh_cmd     = 'gmsh';             % fisso
-%Parameters.gmsh_cmd     = '/home/tom/Documents/gmsh'; % portatile
+%Parameters.gmsh_cmd     = '/usr/bin/gmsh';             % fisso
+Parameters.gmsh_cmd     = '/home/tom/Documents/gmsh'; % portatile
 
 if exist(Parameters.gmsh_cmd,'file')
     % ok
@@ -17,10 +17,10 @@ else
     error('percorso Gmsh non esiste')
 end
 
-
 % winner geometry
 IN = [50 250 50 250 50 2 0.02 0.03];
-Parameters.n_processori = 8;
+
+Parameters.n_processori = 2;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % INPUT UTENTE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -51,6 +51,7 @@ Parameters.Airfoil.Mom_ref_x = 0.25*C_mesh;
 Parameters.Airfoil.Mom_ref_y = 0;
 
 Parameters.HSA.npane = 100;
+
 % calcolo geometria effettiva
 
 [GEOM,fail,log] = geometry_main(Parameters,IN);
@@ -67,10 +68,13 @@ BU_par.Nu   = 0.000018375; %kg/m s
 BU_par.Rho  = 1.225;       %kg/m3
 
 BU_par.alpha = 15;
-BU_par.Ux = BU_par.Umag*cos(BU_par.alpha*pi/180);
-BU_par.Uz = BU_par.Umag*sin(BU_par.alpha*pi/180);
+BU_par.Ux    = BU_par.Umag*cos(BU_par.alpha*pi/180);
+BU_par.Uz    = BU_par.Umag*sin(BU_par.alpha*pi/180);
+
+BU_par.wall_function = 0;
 
 BU_par.extrusion_Thickness = 0.05; %m
+
 %% MODELLO CFD
 STL.point_txt     = 'NACA64212at.txt';
 
@@ -88,9 +92,9 @@ GM_par.x_dom     = x_dom;
 GM_par.l_dom     = GM_par.x_dom/(2*n_cell_ff);
 GM_par.expRatio  = expRatio;
 GM_par.BL        = 1; % 0 = no; 1 = native; 2 = addlayer openFoam 
-GM_par.l_airfoil_v = [0.003 0.002 0.001 0.0008];%GM_par.l_dom/5000;%0.002;
+GM_par.l_airfoil_v = [0.0002];%GM_par.l_dom/5000;%0.002;
 %GM_par.l_slat    = 0.0008;%GM_par.l_dom/5000;%0.001;
-GM_par.Fstruct   = 1;
+GM_par.Fstruct   = 0;
 GM_par.Fquad     = 1;
 
 % GM refinement
@@ -123,11 +127,10 @@ GM_par.Fquad     = 1;
 %       lunghezza elementi
 %       l_w = method_par{4};
 
-
 % % OPENFOAM
 SOLVER.solver        = 'simple';
 SOLVER.startTime     = 0;
-SOLVER.endTime       = 10000;
+SOLVER.endTime       = 1000;
 SOLVER.deltaT        = 1;
 SOLVER.writeInterval = floor(SOLVER.endTime/25);
 
@@ -203,18 +206,19 @@ for i = 1:size(GM_par.l_airfoil_v,2)
     %       r   = method_par{3};
     %       lunghezza elementi
     %       l_w = method_par{4};
-    GM_par.ref_method = {'clock_simple','wake'};
+    GM_par.ref_method = {'none'};
+    GM_par.par_method = {0};
+%    GM_par.ref_method = {'clock_simple','wake'};
     
-    GM_par.par_method{1} = {1,5*GM_par.l_airfoil_v(i)};
-    GM_par.par_method{2} = {0.5,2,2,50*GM_par.l_airfoil_v(i)};
+%     GM_par.par_method{1} = {1,5*GM_par.l_airfoil_v(i)};
+%     GM_par.par_method{2} = {0.5,2,2,50*GM_par.l_airfoil_v(i)};
     
        
-    MESH_par = GM_par;
-    
-    MESH_par = GM_par;
-    CFD.MESH_par      = MESH_par;
+    MESH_par     = GM_par;
+    CFD.MESH_par = MESH_par;
        
     [cp_f{i}] = fCl_core(OPT.x0,IN,CFD,Parameters,xc);
+    
 %     [CLf,CDf] = aeroCoeff( xc,dl,theta_G,cp_f,BU_par );
 %     
 %     fine{iter_f} = {xc,dl,theta_G,cp_f,CLf,CDf};

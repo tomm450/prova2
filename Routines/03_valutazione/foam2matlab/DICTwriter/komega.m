@@ -1,4 +1,4 @@
-function [done] = komega(k_inlet,omega_inlet,case_dir,SOLVER)
+function [done] = komega(k_inlet,omega_inlet,case_dir,SOLVER,BU_par)
 
 
 if strcmp(SOLVER.solver,'simple')
@@ -39,25 +39,23 @@ fprintf(fid,'    outlet  \n');
 fprintf(fid,'    {  \n');
 fprintf(fid,'        type            zeroGradient;  \n');
 fprintf(fid,'    }  \n');
-  
+
+
 fprintf(fid,'    airfoil  \n');
 fprintf(fid,'    {  \n');
-fprintf(fid,'        type            omegaWallFunction;  \n');
-fprintf(fid,'        Cmu              0.09;  \n');
-fprintf(fid,'        kappa            0.41;  \n');
-fprintf(fid,'        E                9.8;  \n');
-fprintf(fid,'        beta1            0.075;  \n');
-fprintf(fid,'        value           uniform 9.8;  \n');
+if BU_par.wall_function == 1
+    fprintf(fid,'        type            omegaWallFunction;  \n');
+    fprintf(fid,'        Cmu              0.09;  \n');
+    fprintf(fid,'        kappa            0.41;  \n');
+    fprintf(fid,'        E                9.8;  \n');
+    fprintf(fid,'        beta1            0.075;  \n');
+    fprintf(fid,'        value           uniform 9.8;  \n');
+else
+    fprintf(fid,'        type            fixedValue;  \n');
+    fprintf(fid,'        value           uniform %3.9f;  \n',BU_par.omega_body);
+end
 fprintf(fid,'    }  \n');
-fprintf(fid,'    slat  \n');
-fprintf(fid,'    {  \n');
-fprintf(fid,'        type            omegaWallFunction;  \n');
-fprintf(fid,'        Cmu              0.09;  \n');
-fprintf(fid,'        kappa            0.41;  \n');
-fprintf(fid,'        E                9.8;  \n');
-fprintf(fid,'        beta1            0.075;  \n');
-fprintf(fid,'        value           uniform 9.8;  \n');
-fprintf(fid,'    }  \n');
+
 
 fprintf(fid,'        front  \n');
 fprintf(fid,'    {  \n');
@@ -117,14 +115,15 @@ fprintf(fid,'    } \n');
 
 fprintf(fid,'    airfoil \n');
 fprintf(fid,'    { \n');
-fprintf(fid,'        type            kqRWallFunction; \n');
-fprintf(fid,'        value           uniform 0.0096; \n');
+if BU_par.wall_function == 1
+    fprintf(fid,'        type            kqRWallFunction; \n');
+    fprintf(fid,'        value           uniform 0.0096; \n');
+else
+    fprintf(fid,'        type            fixedValue;  \n');
+    fprintf(fid,'        value           uniform 0;  \n');
+end
 fprintf(fid,'    } \n');
-fprintf(fid,'        slat \n');
-fprintf(fid,'    { \n');
-fprintf(fid,'        type            kqRWallFunction; \n');
-fprintf(fid,'        value           uniform 0.0096; \n');
-fprintf(fid,'    } \n');
+
 fprintf(fid,'        front \n');
 fprintf(fid,'    { \n');
 fprintf(fid,'        type            empty; \n');
