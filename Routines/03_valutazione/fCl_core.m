@@ -33,6 +33,7 @@ fprintf('CASO #%d\n',ID);
 fprintf(fid,'%d',ID+1);
 fclose(fid);
 %% calcoli preliminari
+
 Re    = BU_par.Rho*BU_par.L*BU_par.Umag/BU_par.Nu;
 Cf    = 0.025/(Re^(1/7));
 Tao   = 0.5*Cf*BU_par.Rho*BU_par.Umag^2;
@@ -40,21 +41,26 @@ Ufric = sqrt(Tao./BU_par.Rho);
 
 % y+ voluta
 if BU_par.wall_function == 1
+    
     yplus_tgt = 50;  % uso wall function
     MESH_par.ds1 = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
     
 else
+    
     yplus_tgt = 1;
     MESH_par.ds1      = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
-    BU_par.omega_body = 6*BU_par.Nu/(0.075*(MESH_par.ds1)^2);
+    BU_par.omega_body = 60*BU_par.Nu/(0.09*(MESH_par.ds1)^2);
+
 end
 
 % calcolo valori inlet
 %k_inlet     = 3/2*(BU_par.Umag*0.05)^2; % https://www.cfd-online.com/Forums/openfoam/67728-help-k-epsilon-values-turbulence.html
-k_inlet     = 1e-3*BU_par.Umag^2/Re;
+%k_inlet     = 1e-3*BU_par.Umag^2/Re;
+k_inlet = (0.001*BU_par.Nu)*(10* BU_par.Umag/BU_par.L); % Quadrio
 
 %omega_inlet = 5*BU_par.Umag/(BU_par.L);
-omega_inlet = 5*BU_par.Umag/(2*MESH_par.x_dom);
+%omega_inlet = 5*BU_par.Umag/(2*MESH_par.x_dom);
+omega_inlet = (10* BU_par.Umag/BU_par.L); % Quadrio
 %%
 Dmean = MESH_par.l_airfoil;
 
