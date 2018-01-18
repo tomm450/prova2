@@ -23,7 +23,7 @@ ds1       = SCALA*GM_par.ds1;
         
         [thick_error,i_thick] = min(abs(thick_cell_try-l_airfoil/exp_ratio));
         
-        GM_par.nlay = i_thick;
+        GM_par.nlay = round(i_thick/2)+1;
         
         thick_sum = sum(thick_cell_try(1:i_thick));
         
@@ -390,11 +390,12 @@ if GM_par.BL == 2
     end
 end
 
+[resultRenumber,logRenumber]=goGoOpenFOAM(sprintf('cd %s/20extrude && renumberMesh',case_dir));
 
 if strcmp(SOLVER.solver,'simple')
-    [~,~] = system(sprintf('cp -r %s/20extrude/constant/polyMesh %s/30simple/constant/',case_dir,case_dir));
+    [~,~] = system(sprintf('cp -r %s/20extrude/1/polyMesh %s/30simple/constant/',case_dir,case_dir));
 elseif strcmp(SOLVER.solver,'piso')
-    [~,~] = system(sprintf('cp -r %s/20extrude/constant/polyMesh %s/40piso/constant/',case_dir,case_dir));
+    [~,~] = system(sprintf('cp -r %s/20extrude/1/polyMesh %s/40piso/constant/',case_dir,case_dir));
 else
     error('someway,somewhere,someone fuck up');
 end

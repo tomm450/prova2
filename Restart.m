@@ -1,8 +1,8 @@
 clean
 
 % case to restart
-Ctr = 9;
-IterNew = 10;
+Ctr = 475;
+IterNew = 5000;
 
 
 for i = 1:size(Ctr,2)
@@ -51,13 +51,13 @@ for i = 1:size(Ctr,2)
    
    [~,imaxJ] = max(ripTime);
   
-   [winN,N] = system(sprintf('tail -n 1 ./Cases_folder/%d/%s/postProcessing/forceCoeffs/%s/forceCoeffs.dat',...
+   [~,N] = system(sprintf('tail -n 2 ./Cases_folder/%d/%s/postProcessing/forceCoeffs/%s/forceCoeffs.dat',...
        Ctr(i),sol,Ls{imaxJ}));
    
-   if winN ~= 0
+   if size(N) == [0 0]
        error('Caso %d: tail forceCoeffs non a buon fine \n');
    else
-       clear winN
+       %clear winN
    end
    
    N = strsplit(N,'\t'); N = str2double(strtrim(N{1}));
@@ -156,7 +156,7 @@ for i = 1:size(Ctr,2)
    f_conv = std(f_conv);
    fprintf('std(Cl(end-200:end) = %f \n',f_conv);
    cp = f_conv;
-   save(sprintf('%s/ID_calcolo.mat',case_dir),'X_IN','IN','RES_struct','Parameters','f','f_conv','RES_struct');
+%   save(sprintf('%s/ID_calcolo.mat',case_dir),'X_IN','IN','RES_struct','Parameters','f','f_conv','RES_struct');
    
    %% TAGLIA-CUCI
    %[punti_ventre_air, punti_dorso_air, punti_ventre_slat, punti_dorso_slat ] ...
@@ -165,7 +165,7 @@ for i = 1:size(Ctr,2)
    %%
    case_folder = sprintf('%s/Cases_folder/%d',pwd,Ctr(i));
    
-   if strcmp(SOLVER.solver,'simple')
+   if strcmp(sol(3:end),'simple')
        system(sprintf('touch %s/30simple/%d.foam',case_folder,Ctr(i)));
        TO_BE_LOAD = sprintf('%s/30simple/%d.foam',case_folder,Ctr(i));
    else

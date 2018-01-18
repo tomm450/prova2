@@ -79,13 +79,16 @@ function [done] = snappyWrite(nome_out,suffisso,SNAPPY_par,x_TE,featureAngle,cas
   %     // If local number of cells is >= maxLocalCells on any processor
   %     // switches from from refinement followed by balancing
   %     // (current method) to (weighted) balancing before refinement.
-  fprintf(fid,'    maxLocalCells 300000; \n');
+  fprintf(fid,'    maxLocalCells 1000000; \n');
+  fprintf(fid,'    maxLocalCells 500000; \n');
+  
   %     // Overall cell limit (approximately). Refinement will stop immediately
   %     // upon reaching this number so a refinement level might not complete.
   %     // Note that this is the number of cells before removing the part which
   %     // is not 'visible' from the keepPoint. The final number of cells might
   %     // actually be a lot less.
-  fprintf(fid,'    maxGlobalCells 1000000; \n');
+  fprintf(fid,'    maxGlobalCells 10000000; \n');
+  %fprintf(fid,'    maxGlobalCells 4000000; \n');
   %
   %     // The surface refinement loop might spend lots of iterations refining just a
   %     // few cells. This setting will cause refinement to stop if <= minimumRefine
@@ -142,7 +145,18 @@ function [done] = snappyWrite(nome_out,suffisso,SNAPPY_par,x_TE,featureAngle,cas
   fprintf(fid,'	     airfoil \n');
   fprintf(fid,'        { \n');
   fprintf(fid,'            mode distance; \n');
-  fprintf(fid,'            levels  ((%f %d)) ; \n',SNAPPY_par.refDist,SNAPPY_par.MaxrefFactor);% // levels must be ordered nearest first
+  fprintf(fid,'            levels  (');
+  
+  for r = 1:size(SNAPPY_par.refDist,2)
+      if SNAPPY_par.MaxrefFactor+1-r >=1
+     
+          fprintf(fid,'(%f %d) ',SNAPPY_par.refDist(r),SNAPPY_par.MaxrefFactor+1-r);% // levels must be ordered nearest first
+  
+      end
+  end
+  
+  fprintf(fid,') ; \n');
+  
   fprintf(fid,'        } \n');
 
   if SNAPPY_par.wakeBox == 1

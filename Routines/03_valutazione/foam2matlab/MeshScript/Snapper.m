@@ -52,8 +52,6 @@ MESH_par.startLay = MESH_par.ds1/Dmean;
 [err,nlay] = min(abs(Dmean/MESH_par.ds1 - MESH_par.expRatio.^[1:250]));
 MESH_par.imin = nlay-1;
 
-
-
 %% STL slat
 tstart = tic;
 
@@ -118,8 +116,12 @@ end
 
 
 
-system(sprintf('rm -r %s/15dummy/constant/polyMesh',case_dir));
-system(sprintf('cp -r %s/10snappy/%d/* %s/15dummy/constant/',case_dir,max(Ddir),case_dir));
+%system(sprintf('rm -r %s/15dummy/constant/polyMesh',case_dir));
+system(sprintf('mkdir %s/15dummy/constant',case_dir));
+%system(sprintf('mkdir %s/15dummy/constant/polyMesh',case_dir));
+
+system(sprintf('cp -r %s/10snappy/%d/* %s/15dummy/constant',case_dir,max(Ddir),case_dir));
+% system(sprintf('cp -r %s/10snappy/%d/* %s/15dummy/constant/',case_dir,max(Ddir),case_dir));
 
 [done] = BC_cor('def',case_dir);
 
@@ -270,8 +272,6 @@ clear rewrite
 [win,body] = system(sprintf('tail -n +20 %s/15dummy/constant/polyMesh/boundary > temp.txt && head -n 31 temp.txt',case_dir));
 [dummy,superdummy] = system('rm temp.txt');
 body_frag = strsplit(body,'\n'); %body_frag = body_frag{1:end-1};
-
-
 
 % back front airfoil
 fid = fopen(sprintf('%s/15dummy/constant/polyMesh/boundary',case_dir),'w+');

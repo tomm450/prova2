@@ -72,7 +72,7 @@ if wtd == 0
    close 7777777
    % %
    fvc = surf2patch(h,'triangles');
-   stl_writer(fvc, strcat('./0stl/out/',nome_out,'_airfoil_def'))
+   stl_writer(fvc, sprintf('%s/10snappy/constant/triSurface/%s_airfoil_def',case_dir,nome_out));
 
 elseif wtd == 1
     body_land = 1/k.*[GEOM.up_land(1:end-1,:);flipud(GEOM.dwn_land)];

@@ -42,7 +42,7 @@ Ufric = sqrt(Tao./BU_par.Rho);
 % y+ voluta
 if BU_par.wall_function == 1
     
-    yplus_tgt = 50;  % uso wall function
+    yplus_tgt = 1.7*50;  % uso wall function
     MESH_par.ds1 = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
     
 else
@@ -101,16 +101,24 @@ else
 end
 %% MESH
 fprintf('\nMESH... \n')
-
+tstart = tic;
 if MESH_par.solver == 'gmsh'
-    tstart = tic;
+    
     [~] = Gmesher(X_IN,IN,STL,MESH_par,case_dir,Parameters,SOLVER,BU_par.L);
-    crono(1) = toc(tstart)/60;
+    
 elseif MESH_par.solver == 'snap'
+    
     [ done,crono ] = Snapper( X_IN,IN,STL,MESH_par,case_dir,Parameters );
 end
+crono(1) = toc(tstart)/60;
+
+fprintf('\ncd %s/20extrude && checkMesh \n',case_dir)
+[result,logMesh]=goGoOpenFOAM(sprintf('cd %s/20extrude && checkMesh',case_dir));
+
+fprintf('\n%s \n',logMesh);
 
 fprintf('\nMesh in %f min \n\n',crono(1));
+
 
 %% SCRIVO DICT
 tstart = tic;
@@ -125,7 +133,8 @@ if strcmp(SOLVER.solver,'simple')
     fprintf('simple\ncd %s/30simple/ && mpirun -n %d simpleFoam -parallel > ../3logFoam.txt \n',case_dir,Parameters.n_processori)
     [done] = goGoOpenFOAM(sprintf('cd %s/30simple/ && mpirun -n %d simpleFoam -parallel > ../3logFoam.txt ',case_dir,Parameters.n_processori));
     fprintf('reconstructPar \ncd %s/30simple/ && reconstructPar -latestTime > ../3logrec.txt\n',case_dir);
-    [done] = goGoOpenFOAM(sprintf('cd %s/30simple/ && reconstructPar -latestTime > ../3logrec.txt',case_dir));
+    [done] = goGoOpenFOAM(sprintf('cd %s/30simple/ && reconstructPar -latestTime > yp.txt',case_dir));
+    system(sprintf('tail .%s/30simple/yp.txt',case_dir));
     
 elseif strcmp(SOLVER.solver,'piso')
            
@@ -169,26 +178,26 @@ save(sprintf('%s/ID_calcolo.mat',case_dir),'X_IN','IN','RES_struct','Parameters'
 %    = cp_over_airfoil(5,my_dir);
 
 %%
-case_folder = sprintf('%s/Cases_folder/%d',pwd,ID);
-
-if strcmp(SOLVER.solver,'simple')
-    system(sprintf('touch %s/30simple/%d.foam',case_folder,ID));
-    TO_BE_LOAD = sprintf('%s/30simple/%d.foam',case_folder,ID);
-else
-    system(sprintf('touch %s/40piso/%d.foam',case_folder,ID));
-    TO_BE_LOAD = sprintf('%s/40piso/%d.foam',case_folder,ID);
-end
-TO_BE_OPEN = sprintf('%s/PPy.py',case_folder);
-TO_BE_SAVE = sprintf('%s/%d.csv',case_folder,ID);
-
-% scrivo script pyton 
-[done] = PPywriter(TO_BE_OPEN,TO_BE_LOAD,TO_BE_SAVE);
-% eseguo
-goGoOpenFOAM(sprintf('pvbatch %s',TO_BE_OPEN));
-% modifico output in modo da poterlo direttamente importare
-system(sprintf('cd %s && tail -n +2 %d0.csv > %dc.csv',case_folder,ID,ID));
-
-air_mat = csvread(sprintf('%s/%dc.csv',case_folder,ID));
+% case_folder = sprintf('%s/Cases_folder/%d',pwd,ID);
+% 
+% if strcmp(SOLVER.solver,'simple')
+%     system(sprintf('touch %s/30simple/%d.foam',case_folder,ID));
+%     TO_BE_LOAD = sprintf('%s/30simple/%d.foam',case_folder,ID);
+% else
+%     system(sprintf('touch %s/40piso/%d.foam',case_folder,ID));
+%     TO_BE_LOAD = sprintf('%s/40piso/%d.foam',case_folder,ID);
+% end
+% TO_BE_OPEN = sprintf('%s/PPy.py',case_folder);
+% TO_BE_SAVE = sprintf('%s/%d.csv',case_folder,ID);
+% 
+% % scrivo script pyton 
+% [done] = PPywriter(TO_BE_OPEN,TO_BE_LOAD,TO_BE_SAVE);
+% % eseguo
+% goGoOpenFOAM(sprintf('pvbatch %s',TO_BE_OPEN));
+% % modifico output in modo da poterlo direttamente importare
+% system(sprintf('cd %s && tail -n +2 %d0.csv > %dc.csv',case_folder,ID,ID));
+% 
+% air_mat = csvread(sprintf('%s/%dc.csv',case_folder,ID));
 
 % %% per calibrazione commentare
 % cd = load('current_design.mat');
@@ -297,7 +306,7 @@ air_mat = csvread(sprintf('%s/%dc.csv',case_folder,ID));
 % cp = cp';
 cp = 'dummy';
 end
-%% FINE MAIN %%
-    function result=goGoOpenFOAM(command)
-        result=unix(['export LD_LIBRARY_PATH=""; . /opt/openfoam5/etc/bashrc; ' command]);
-    end
+% % % %% FINE MAIN %%
+% % %     function [result,log=goGoOpenFOAM(command)
+% % %         result=unix(['export LD_LIBRARY_PATH=""; . /opt/openfoam5/etc/bashrc; ' command]);
+% % %     end
