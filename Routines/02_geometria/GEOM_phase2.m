@@ -2,32 +2,12 @@ function [GEO] = GEOM_phase2(X_IN,IN,Parameters,SCALA) %,nome_out,FLAG_raccordo,
 
 [ GEOM,fail,log ] = geometry_main(Parameters,IN);
 
-if size(X_IN,2) == 0
+if ischar(X_IN)
     % deorga
-    fprintf('X_IN == [];\nCarico file ./deroga.mat contenente le cordinate assulute dei (fino a) 3 elementi\n');
-    
-%     load('./deroga.mat')
-%     GEOM.up_land   = airfoil_up;
-%     GEOM.dwn_land  = airfoil_dwn;
-%     
-%     GEOM.slat_land_u = slat_up;
-%     GEOM.slat_land_d = slat_dwn;
-%     
-%     GEOM.flap_land_u = flap_up;
-%     GEOM.flap_land_d = flap_dwn;
-      load('./7airfoil.mat');
-    
-else
-    
-    %nome_out = 'tronco';
-    
-    
-    %[ GEOM,ERR] = slat_position( GEOM, X_IN(1), X_IN(2),X_IN(3),1);
-    
+    fprintf('X_IN == %s;\n\nCarico file ./Airfoil_preparation/%s.mat contenente le cordinate assulute dei (fino a) 7 elementi\n',X_IN,X_IN);
+    load(sprintf('./Airfoil_preparation/%s',X_IN));    
+else     
     [ GEOM,~] = slat_position_x_y_a( GEOM, X_IN(1), X_IN(2),X_IN(3));
-    %GEOM.up_land  = GEOM.up_land/1000;
-    %GEOM.dwn_land = GEOM.dwn_land/1000;
-    
 end
 
 n_camp = 150;

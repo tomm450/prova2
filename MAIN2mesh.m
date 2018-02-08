@@ -30,7 +30,7 @@ n_cell_ff_v  = [10];
 % grandezze in unità di corda
 x_dom_v     = 10; %30:10:60; % semilato quadrato
 alpha_v     = [10];
-GM_par.wtd       = 0;
+GM_par.wtd       = 4;
 SOLVER.endTime   = 2000;
 
 BL_vect = [2];
@@ -230,7 +230,7 @@ for z = 1:size(BL_vect,2)
                     CFD.SOLVER        = SOLVER;
                     
                     %[cp_f{i,j}] = fCl_core_OPT([],IN,CFD,Parameters,nan);
-                    [cp_f{i,j}] = fCl_core_OPT(OPT.x0,IN,CFD,Parameters,nan);
+                    [cp_f{i,j}] = fCl_core_OPT('30p30n',IN,CFD,Parameters,nan);
                     
                     
                 end

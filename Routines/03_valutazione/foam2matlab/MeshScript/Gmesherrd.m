@@ -60,8 +60,6 @@ tstart = tic;
 
 l_airfoil_str = 'l_a';
 l_slat_str    = 'l_s';
-%l_flap_str    = 'l_f';
-
 
 l_dom_str     = 'l_d';
 x_dom_str     = 'x_d';
@@ -81,12 +79,11 @@ fprintf(fid,'%s = %f; \n',x_dom_str,x_dom);
 p_index = 0;
 airfoil_boundary = '';
 surf_string      = '';
-
-if GM_par.wtd == 0 || GM_par.wtd == 1 || GM_par.wtd == 3 || GM_par.wtd == 4
+surf_entity      =  0; %
+if GM_par.wtd ~= 2 && GM_par.wtd ~= 6 
     
     
     if GM_par.wtd == 0
-        % profilo cavo
         btc = GEO.MAIN{1};
     else
         btc = GEO.MAIN{2};
@@ -96,10 +93,11 @@ if GM_par.wtd == 0 || GM_par.wtd == 1 || GM_par.wtd == 3 || GM_par.wtd == 4
     
     airfoil_boundary = strcat(airfoil_boundary,bl_str);
     surf_string      = strcat(surf_string,num2str(2));
+    surf_entity = surf_entity+1;
 end
 
 % slat
-if GM_par.wtd >= 2 %|| GM_par.wtd == 3
+if GM_par.wtd >= 2 && GM_par.wtd <= 4
    
     for j = 1:size(GEO.SLAT,2)
         
@@ -109,14 +107,16 @@ if GM_par.wtd >= 2 %|| GM_par.wtd == 3
         
         if max(size(surf_string)) == 0
             surf_string      = strcat(surf_string,num2str((090+10*j)));
+            surf_entity = surf_entity+1;
         else
             surf_string      = strcat(surf_string,',',num2str((090+10*j)));
+            surf_entity = surf_entity+1;
         end
     end
 end
 
 % flap
-if GM_par.wtd == 4
+if GM_par.wtd >= 4
     
     for j = 1:size(GEO.FLAP,2)
         
@@ -125,8 +125,10 @@ if GM_par.wtd == 4
         airfoil_boundary = strcat(airfoil_boundary,',',bl_str);
         if max(size(surf_string)) == 0
             surf_string      = strcat(surf_string,num2str((190+10*j)));
+            surf_entity = surf_entity+1;
         else
             surf_string      = strcat(surf_string,',',num2str((190+10*j)));
+            surf_entity = surf_entity+1;
         end
     end
 end
@@ -204,31 +206,22 @@ fprintf(fid,'Layers{1};\n');
 fprintf(fid,'Recombine;\n');
 fprintf(fid,'}\n');
 
-if GM_par.wtd <= 2 % una sola superficie
-    %//Define physical surfaces - numeric designations from GUI
-    fprintf(fid,'Physical Surface("back") = {268};\n');
-    fprintf(fid,'Physical Surface("front") = {201};\n');
-    fprintf(fid,'Physical Surface("inlet") = {227, 223};\n');
-    fprintf(fid,'Physical Surface("outlet") = {219, 231};\n');
-    fprintf(fid,'Physical Surface("airfoil") = {251,255,259,263,267,235,239,243,247};\n');
-    fprintf(fid,'Physical Volume("internal") = {1};\n');
-elseif GM_par.wtd == 3
-    %//Define physical surfaces - numeric designations from GUI
-    fprintf(fid,'Physical Surface("back") = {313};\n');
-    fprintf(fid,'Physical Surface("front") = {201};\n');
-    fprintf(fid,'Physical Surface("inlet") = {236, 232};\n');
-    fprintf(fid,'Physical Surface("outlet") = {228, 240};\n');
-    fprintf(fid,'Physical Surface("airfoil") = {260,264,268,272,276,244,248,252,256,296,300,304,284,280,312,308,288,292};\n');
-    fprintf(fid,'Physical Volume("internal") = {1};\n');
-    elseif GM_par.wtd == 4
-    %//Define physical surfaces - numeric designations from GUI
-    fprintf(fid,'Physical Surface("back") = {365};\n');
-    fprintf(fid,'Physical Surface("front") = {201};\n');
-    fprintf(fid,'Physical Surface("inlet") = {252, 248};\n');
-    fprintf(fid,'Physical Surface("outlet") = {244, 256};\n');
-    fprintf(fid,'Physical Surface("airfoil") = {312,316,320,324,328,296,300,304,308,276,280,272,268,284,288,264,292,260,348,352,344,356,340,336,360,364,332};\n');
-    fprintf(fid,'Physical Volume("internal") = {1};\n');
+if surf_entity > 7
+    error('rilevati più di 7 profili,numero massimo implementato per mesh automatica')
 end
+
+LUT = [18 27 43 62 71 90 109];
+air_index = 8:4:(9*4*surf_entity);
+air_str   = sprintf(',%d',201+LUT(surf_entity)+12+air_index);
+
+fprintf(fid,'Physical Surface("front")   = {%d};\n',201);
+fprintf(fid,'Physical Surface("outlet")  = {%d, %d};\n',201+LUT(surf_entity),  201+LUT(surf_entity)+12);
+fprintf(fid,'Physical Surface("inlet")   = {%d, %d};\n',201+LUT(surf_entity)+4,201+LUT(surf_entity)+8 );
+fprintf(fid,'Physical Surface("airfoil") = {%d%s};\n',201+LUT(surf_entity)+16,air_str);
+fprintf(fid,'Physical Surface("back")    = {%d};\n',201+LUT(surf_entity)+12+air_index(end)+1);
+
+
+fprintf(fid,'Physical Volume("internal") = {1};\n');
 
 if GM_par.BL == 1
     %hwall * ratio^(dist/hwall)
