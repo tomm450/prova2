@@ -21,9 +21,9 @@ solvers
     {
 
         solver                GAMG;          // GAMG;
-        tolerance             1e-8;          // 1e-7;
-        //relTol                0.001;         // 0.01;
-        minIter               5;             // 5;
+        tolerance             1e-7;          // 1e-7;
+        relTol                0.001;          // 0.01;
+        minIter               5;            // 5;
         maxIter               100;           // 100;
         smoother              GaussSeidel;   // GaussSeidel;
         nPreSweeps            0;             // 0;
@@ -44,49 +44,22 @@ solvers
 
     }
 
-    U
+ U
     {
-        solver          smoothSolver;        // smoothSolver;
-        smoother        GaussSeidel;         // GaussSeidel;
-        nSweeps         2;                   // 2;
-        tolerance       1e-10;               // 1e-08;
-        //relTol          0.001;                 // 0.1;
-
-// type coupled;
-// solver PBiCCCG;
-// preconditioner DILU;
-// tolerance (1e-08 1e-08 1e-08);
-// relTol (0 0 0);
-// minIter 3;
-
-
-    }
-    
-    Phi
-    {
-        $p;
+        solver          PBiCG;
+        preconditioner  DILU;
+        tolerance       1e-08;
+        relTol          0.001;
     }
 
-
-    k
+    "(omega|k|nuTilda)"
     {
-        solver          smoothSolver;        // smoothSolver;
-        smoother        GaussSeidel;         // GaussSeidel;
-        nSweeps         1;                   // 1;      
-        tolerance       1e-10;               // 1e-8;
-        //relTol          0.001;                // 0.01
-       
+        solver          PBiCG;
+        preconditioner  DILU;
+        tolerance       1e-08;
+        relTol          0.001;
     }
 
-    omega
-    {
-        solver          smoothSolver;        // smoothSolver;
-        smoother        GaussSeidel;         // GaussSeidel;
-        nSweeps         1;                   // 1;
-        tolerance       1e-5;                // 1e-8;
-        //relTol          0.001;                 // 0.1;
-        
-    }
 
 }
 
@@ -104,17 +77,11 @@ SIMPLE
     }
 }
 
-potentialFlow
-{
-    nNonOrthogonalCorrectors 5;
-}
-
-
 relaxationFactors
 {
     fields
     {
-        p               0.7;                 // 0.3;
+        p               0.3;                 // 0.3;
     }
 
     equations

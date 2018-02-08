@@ -1,4 +1,4 @@
-function [telapsed] = Gmesher(X_IN,IN,STL,GM_par,case_dir,Parameters,SOLVER,SCALA)
+function [telapsed] = Gmesherrd(X_IN,IN,STL,GM_par,case_dir,Parameters,SOLVER,SCALA)
 
 % genera mesh con gmsh, aggoinge i BL con refineLayer, estrude con
 % extrudeMesh e copia nella cartella simple
@@ -40,7 +40,7 @@ ds1       = SCALA*GM_par.ds1;
         
         GM_par.nlay = i_thick;
     
-    elseif GM_par.BL == 0 % foam     
+    elseif GM_par.BL == 0 % no     
         
         l_slat    = l_slat/l_airfoil*ds1;
         l_airfoil = ds1;
@@ -49,23 +49,12 @@ ds1       = SCALA*GM_par.ds1;
     
 
 
-
-% rref = GM_par.rref;
-% lref = GM_par.lref;
-%point_txt = STL.point_txt;
-
 FAKE_struct = GM_par.Fstruct;
 QUAD        = GM_par.Fquad;
-
-% my_dir = what;
-% my_dir = my_dir.path;
-% my_dirs = genpath(my_dir);
-% addpath(my_dirs);
-
 tstart = tic;
 
 %% GEOM
-[GEOM] = GEOM_phase2(X_IN,IN,Parameters);
+[GEO] = GEOM_phase2(X_IN,IN,Parameters,SCALA);
 
 %% FILE .geo
 
@@ -76,93 +65,6 @@ l_slat_str    = 'l_s';
 
 l_dom_str     = 'l_d';
 x_dom_str     = 'x_d';
-
-n_camp = 150;
-
-
-if GM_par.wtd == 0 % profilo base
-    
-    if max(size(Parameters.Airfoil.up)) >= n_camp
-        pu = Parameters.Airfoil.up(round(linspace(1,size(Parameters.Airfoil.up,1),n_camp)),:);
-    else
-        pu = Parameters.Airfoil.up;
-    end
-    
-    if max(size(Parameters.Airfoil.dwn)) >= n_camp        
-        pd = Parameters.Airfoil.dwn(round(linspace(1,size(Parameters.Airfoil.dwn,1),n_camp)),:);
-    else
-        pd = Parameters.Airfoil.dwn;
-    end
-    
-    p = SCALA*[flipud(pu(2:end,:));pd(1:end-1,:)]/1000;
-    
-elseif GM_par.wtd == 1 % profilo senza slat ( curva superiore differente)
-    
-    p = SCALA*[flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
-    
-elseif GM_par.wtd == 2 % solo slat
-                
-    psu = flipud(GEOM.slat_land_u)/1000; 
-    if max(size(psu)) >= n_camp
-        psu = psu(round(linspace(1,size(psu,1),n_camp)),:);
-    end
-    
-    psd = GEOM.slat_land_d/1000;
-    if max(size(psd)) >= n_camp
-        psd = psd(round(linspace(1,size(psd,1),n_camp)),:);
-    end
-    
-    ps = SCALA*[psu(1:end-1,:);psd(1:end-1,:)];
-
-elseif GM_par.wtd == 3 % tutto
-
-    p = SCALA*[flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
-        
-    psu = flipud(GEOM.slat_land_u)/1000; 
-    if max(size(psu)) >= n_camp
-        psu = psu(round(linspace(1,size(psu,1),n_camp)),:);
-    end
-    
-    psd = GEOM.slat_land_d/1000;
-    if max(size(psd)) >= n_camp
-        psd = psd(round(linspace(1,size(psd,1),n_camp)),:);
-    end
-    
-    ps = SCALA*[psu(1:end-1,:);psd(1:end-1,:)];
-    
-    
-elseif GM_par.wtd == 4 % tutto
-    
-    p = SCALA*[flipud(GEOM.up_land(2:end,:));GEOM.dwn_land(1:end-1,:)]/1000;
-    % slat
-    psu = flipud(GEOM.slat_land_u)/1000;
-    if max(size(psu)) >= n_camp
-        psu = psu(round(linspace(1,size(psu,1),n_camp)),:);
-    end
-    
-    psd = GEOM.slat_land_d/1000;
-    if max(size(psd)) >= n_camp
-        psd = psd(round(linspace(1,size(psd,1),n_camp)),:);
-    end
-    
-    ps = SCALA*[psu(1:end-1,:);psd(1:end-1,:)];
-    % flap
-    pfu = flipud(GEOM.flap_land_u)/1000;
-    if max(size(pfu)) >= n_camp
-        pfu = pfu(round(linspace(1,size(pfu,1),n_camp)),:);
-    end
-    
-    pfd = GEOM.flap_land_d/1000;
-    if max(size(pfd)) >= n_camp
-        pfd = pfd(round(linspace(1,size(psd,1),n_camp)),:);
-    end
-    
-    pf = SCALA*[pfu(1:end-1,:);pfd(1:end-1,:)];
-    
-    
-end
-
-
 
 
 %% SCRIVO FILE
@@ -175,108 +77,83 @@ fprintf(fid,'%s = %f; \n',l_airfoil_str,l_airfoil);
 fprintf(fid,'%s = %f; \n',l_dom_str,l_dom);
 fprintf(fid,'%s = %f; \n',x_dom_str,x_dom);
 
+%% POINT
+p_index = 0;
+airfoil_boundary = '';
+surf_string      = '';
 
-
-if GM_par.wtd == 0 || GM_par.wtd == 1 || GM_par.wtd == 3 || GM_par.wtd == 4 
-
-  for k = 1:size(p,1)
-
-        fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %s};\n',k,p(k,1),p(k,2),l_airfoil_str);
-  end
-  pend1 = k;
-  pend2 = k;
-  
-else
-  pend1 = 0;
-  pend2 = 0;
+if GM_par.wtd == 0 || GM_par.wtd == 1 || GM_par.wtd == 3 || GM_par.wtd == 4
+    
+    
+    if GM_par.wtd == 0
+        % profilo cavo
+        btc = GEO.MAIN{1};
+    else
+        btc = GEO.MAIN{2};
+    end
+    
+    [p_index,bl_str] = Pointer_Spliner(btc,p_index,2,10,fid,l_airfoil);
+    
+    airfoil_boundary = strcat(airfoil_boundary,bl_str);
+    surf_string      = strcat(surf_string,num2str(2));
 end
 
 % slat
 if GM_par.wtd >= 2 %|| GM_par.wtd == 3
-    for k = 1:size(ps,1)-1
-        fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %s};\n',pend1+k,ps(k,1),ps(k,2),l_slat_str);
+   
+    for j = 1:size(GEO.SLAT,2)
+        
+        [p_index,bl_str] = Pointer_Spliner(GEO.SLAT{j},p_index,(90+10*j),(90+10*j),fid,l_slat);
+        
+        airfoil_boundary = strcat(airfoil_boundary,',',bl_str);
+        
+        if max(size(surf_string)) == 0
+            surf_string      = strcat(surf_string,num2str((090+10*j)));
+        else
+            surf_string      = strcat(surf_string,',',num2str((090+10*j)));
+        end
     end
-    pend  = pend1+k;
-    pend2 =pend;
-    
-else    
-    pend = pend1;
-    pend2 = pend1;
 end
 
 % flap
-if GM_par.wtd == 4 %|| GM_par.wtd == 3 
-  for k = 1:size(pf,1)-1
-     fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %s};\n',pend2+k,pf(k,1),pf(k,2),l_slat_str);
-  end
-  pend = pend2+k;
-else
-  pend = pend2;
+if GM_par.wtd == 4
+    
+    for j = 1:size(GEO.FLAP,2)
+        
+        [p_index,bl_str] = Pointer_Spliner(GEO.FLAP{j},p_index,(190+10*j),(190+10*j),fid,l_slat);
+        
+        airfoil_boundary = strcat(airfoil_boundary,',',bl_str);
+        if max(size(surf_string)) == 0
+            surf_string      = strcat(surf_string,num2str((190+10*j)));
+        else
+            surf_string      = strcat(surf_string,',',num2str((190+10*j)));
+        end
+    end
 end
 
 
 % farfield
-fprintf(fid,'Point(%d) = { %s,  0.0000000,  %s,  %s};\n',pend+1,x_dom_str,x_dom_str,l_dom_str);
-fprintf(fid,'Point(%d) = { %s,  0.0000000, -%s, %s};\n', pend+2,x_dom_str,x_dom_str,l_dom_str);
-fprintf(fid,'Point(%d) = { -%s, 0.0000000, -%s,%s};\n',  pend+3,x_dom_str,x_dom_str,l_dom_str);
-fprintf(fid,'Point(%d) = { -%s, 0.0000000,  %s, %s};\n', pend+4,x_dom_str,x_dom_str,l_dom_str);
+fprintf(fid,'Point(%d) = { %s,  0.0000000,  %s,  %s};\n',p_index(end)+1,x_dom_str,x_dom_str,l_dom_str);
+fprintf(fid,'Point(%d) = { %s,  0.0000000, -%s, %s};\n', p_index(end)+2,x_dom_str,x_dom_str,l_dom_str);
+fprintf(fid,'Point(%d) = { -%s, 0.0000000, -%s,%s};\n',  p_index(end)+3,x_dom_str,x_dom_str,l_dom_str);
+fprintf(fid,'Point(%d) = { -%s, 0.0000000,  %s, %s};\n', p_index(end)+4,x_dom_str,x_dom_str,l_dom_str);
 
-lastpoint = pend+4;
+lastpoint = p_index(end)+4;
 
+
+%% LINE
 %//Define bounding box edges
-fprintf(fid,'Line(1) = {%d, %d};\n',pend+1,pend+2);
-fprintf(fid,'Line(2) = {%d, %d};\n',pend+2,pend+3);
-fprintf(fid,'Line(3) = {%d, %d};\n',pend+3,pend+4);
-fprintf(fid,'Line(4) = {%d, %d};\n',pend+4,pend+1);
+fprintf(fid,'Line(1) = {%d, %d};\n',p_index(end)+1,p_index(end)+2);
+fprintf(fid,'Line(2) = {%d, %d};\n',p_index(end)+2,p_index(end)+3);
+fprintf(fid,'Line(3) = {%d, %d};\n',p_index(end)+3,p_index(end)+4);
+fprintf(fid,'Line(4) = {%d, %d};\n',p_index(end)+4,p_index(end)+1);
 
 %//Define foil spline and trailing edge
 %//Define bounding box outer boundary
-fprintf(fid,'Line Loop(101) = {1, 2, 3, 4};\n');
-
-if GM_par.wtd == 0 || GM_par.wtd == 1 
- 
- fprintf(fid,'Spline(5) = {1:%d,1};\n',size(p,1));
- fprintf(fid,'Line Loop(102) = {5};\n');
- 
- bl_str      ='5';
- surf_string ='101, 102';
-
-elseif GM_par.wtd == 2 
-
- fprintf(fid,'Spline(6) = {%d:%d, %d};\n',pend1+1,pend,pend1+1);%,pend1+1);
- fprintf(fid,'Line Loop(103) = {6};\n');
- 
- bl_str       ='6';
-  surf_string ='101, 103';
-
-elseif GM_par.wtd == 3 
-    
- fprintf(fid,'Spline(5) = {1:%d,1};\n',size(p,1));
- fprintf(fid,'Spline(6) = {%d:%d, %d};\n',pend1+1,pend,pend1+1);%,pend1+1);
-  
- fprintf(fid,'Line Loop(102) = {5};\n');
- fprintf(fid,'Line Loop(103) = {6};\n');
- 
- bl_str      ='5,6'; 
- surf_string ='101, 102, 103';
-
- elseif GM_par.wtd == 4
-    
- fprintf(fid,'Spline(5) = {1:%d,1};\n',size(p,1));
- fprintf(fid,'Spline(6) = {%d:%d, %d};\n',pend1+1,pend2,pend1+1);%,pend1+1);
- fprintf(fid,'Spline(7) = {%d:%d, %d};\n',pend2+1,pend, pend2+1);%,pend1+1);
-  
- fprintf(fid,'Line Loop(102) = {5};\n');
- fprintf(fid,'Line Loop(103) = {6};\n');
- fprintf(fid,'Line Loop(104) = {7};\n');
- 
- bl_str      ='5,6'; 
- surf_string ='101, 102, 103, 104';
- 
-end
+fprintf(fid,'Line Loop(1) = {1, 2, 3, 4};\n');
 
 %//Define unstructured far field mesh zone
-fprintf(fid,'Plane Surface(201) = {%s};\n',surf_string);
+fprintf(fid,'Plane Surface(201) = {1,%s};\n',surf_string);
 
 if FAKE_struct == 1
     fprintf(fid,' Transfinite Surface{201}={%s};\n',surf_string);
@@ -294,31 +171,32 @@ end
 %% REFINE MODULE
 
 for i = 1:max(size(GM_par.ref_method))
-% casi attualmente implementati
-%     case {'none'}
-%         method_par = {};
-%         done = 1;
-%     case {'clock_simple'}
-%         % 24 punti su circonferenza di raggio rref di dimensione lref
-%         rref = method_par{1};
-%         lref = method_par{2};
-%     case 'sublinear'
-%         
-%         % parametri per forma ellisse
-%         ellx = method_par{1};
-%         elly = method_par{2};
-%         
-%         % raggio interpolazione lineare
-%         rref  = method_par{3}; 
-%         % coefficiente tc nuova lunghezza a rref sia lref*l_linear
-%         lref  = method_par{4};
-%         % numero circonferenze da marchiare
-%         nstaz = method_par{5};
-
-[lastpoint] = refineModuleGmsh(GM_par.ref_method{i},GM_par.par_method{i},...
-    fid,lastpoint,l_airfoil,x_dom);
-
+    % casi attualmente implementati
+    %     case {'none'}
+    %         method_par = {};
+    %         done = 1;
+    %     case {'clock_simple'}
+    %         % 24 punti su circonferenza di raggio rref di dimensione lref
+    %         rref = method_par{1};
+    %         lref = method_par{2};
+    %     case 'sublinear'
+    %
+    %         % parametri per forma ellisse
+    %         ellx = method_par{1};
+    %         elly = method_par{2};
+    %
+    %         % raggio interpolazione lineare
+    %         rref  = method_par{3};
+    %         % coefficiente tc nuova lunghezza a rref sia lref*l_linear
+    %         lref  = method_par{4};
+    %         % numero circonferenze da marchiare
+    %         nstaz = method_par{5};
+    
+    [lastpoint] = refineModuleGmsh(GM_par.ref_method{i},GM_par.par_method{i},...
+        fid,lastpoint,l_airfoil,x_dom);
+    
 end
+
 %//Extrude unstructured far field mesh
 fprintf(fid,'Extrude {0, 1, 0} {\n');
 fprintf(fid,'Surface {201};\n');
@@ -326,29 +204,29 @@ fprintf(fid,'Layers{1};\n');
 fprintf(fid,'Recombine;\n');
 fprintf(fid,'}\n');
 
-if GM_par.wtd <= 2
+if GM_par.wtd <= 2 % una sola superficie
     %//Define physical surfaces - numeric designations from GUI
-    fprintf(fid,'Physical Surface("back") = {228};\n');
+    fprintf(fid,'Physical Surface("back") = {268};\n');
     fprintf(fid,'Physical Surface("front") = {201};\n');
-    fprintf(fid,'Physical Surface("inlet") = {219, 215};\n');
-    fprintf(fid,'Physical Surface("outlet") = {211, 223};\n');
-    fprintf(fid,'Physical Surface("airfoil") = {227};\n');
+    fprintf(fid,'Physical Surface("inlet") = {227, 223};\n');
+    fprintf(fid,'Physical Surface("outlet") = {219, 231};\n');
+    fprintf(fid,'Physical Surface("airfoil") = {251,255,259,263,267,235,239,243,247};\n');
     fprintf(fid,'Physical Volume("internal") = {1};\n');
 elseif GM_par.wtd == 3
     %//Define physical surfaces - numeric designations from GUI
-    fprintf(fid,'Physical Surface("back") = {233};\n');
+    fprintf(fid,'Physical Surface("back") = {313};\n');
     fprintf(fid,'Physical Surface("front") = {201};\n');
-    fprintf(fid,'Physical Surface("inlet") = {220, 216};\n');
-    fprintf(fid,'Physical Surface("outlet") = {212, 224};\n');
-    fprintf(fid,'Physical Surface("airfoil") = {228, 232};\n');
+    fprintf(fid,'Physical Surface("inlet") = {236, 232};\n');
+    fprintf(fid,'Physical Surface("outlet") = {228, 240};\n');
+    fprintf(fid,'Physical Surface("airfoil") = {260,264,268,272,276,244,248,252,256,296,300,304,284,280,312,308,288,292};\n');
     fprintf(fid,'Physical Volume("internal") = {1};\n');
     elseif GM_par.wtd == 4
     %//Define physical surfaces - numeric designations from GUI
-    fprintf(fid,'Physical Surface("back") = {238};\n');
+    fprintf(fid,'Physical Surface("back") = {365};\n');
     fprintf(fid,'Physical Surface("front") = {201};\n');
-    fprintf(fid,'Physical Surface("inlet") = {221, 217};\n');
-    fprintf(fid,'Physical Surface("outlet") = {213, 225};\n');
-    fprintf(fid,'Physical Surface("airfoil") = {229, 233, 237};\n');
+    fprintf(fid,'Physical Surface("inlet") = {252, 248};\n');
+    fprintf(fid,'Physical Surface("outlet") = {244, 256};\n');
+    fprintf(fid,'Physical Surface("airfoil") = {312,316,320,324,328,296,300,304,308,276,280,272,268,284,288,264,292,260,348,352,344,356,340,336,360,364,332};\n');
     fprintf(fid,'Physical Volume("internal") = {1};\n');
 end
 
@@ -481,7 +359,69 @@ end
 telapsed = toc(tstart);
 
 end
+%% SCRIVO PUNTI DI UNA DATA GEOMETRIA
+function [p_index,bl_str] = Pointer_Spliner(btc,p_index,n_loop,n_spline,fid,l_cell)
 
+leri = [];
+
+for k = 1:size(btc{1},1)
+    
+    if btc{1}(k,1) > btc{2}(1)+0.1*(btc{3}(1)-btc{2}(1)) &&...
+            btc{1}(k,1) < btc{2}(1)+0.9*(btc{3}(1)-btc{2}(1))
+        
+        fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %s};\n',p_index(end)+k,btc{1}(k,1),btc{1}(k,2),l_cell);
+        
+        if size(leri,2) == 0
+            leri = [leri,p_index(end)+k];
+        elseif size(leri,2) == 2
+            leri = [leri,p_index(end)+k];
+        end
+        
+    elseif btc{1}(k,1) >= btc{2}(1)+0.9*(btc{3}(1)-btc{2}(1))
+        
+        fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %d};\n',p_index(end)+k,btc{1}(k,1),btc{1}(k,2),l_cell/3);
+        if size(leri,2) == 3
+            leri = [leri,p_index(end)+k];
+        end
+        
+    elseif btc{1}(k,1) <= btc{2}(1)+0.1*(btc{3}(1)-btc{2}(1))
+        
+        fprintf(fid,'Point(%d) = { %f, 0.0000000, %f, %d};\n',p_index(end)+k,btc{1}(k,1),btc{1}(k,2),l_cell/3);
+        if size(leri,2) == 1
+            leri = [leri,p_index(end)+k];
+        end
+        
+    end
+    
+end
+
+if max(size(leri)) == 4 %
+    % ok
+else
+    error('leri ha dimensioninon congure\n');
+end
+
+fprintf(fid,'Spline(%d) = {%d:%d};\n',   n_spline,  p_index(end)+1,leri(1)-3);
+fprintf(fid,'Spline(%d) = {%d:%d};\n',   n_spline+1,  leri(1)-3,leri(1)+3);
+fprintf(fid,'Spline(%d) = {%d:%d};\n',   n_spline+2,  leri(1)+3,leri(2)-3);
+fprintf(fid,'Spline(%d) = {%d:%d};\n',   n_spline+3,  leri(2)-3,leri(2)+3);
+fprintf(fid,'Spline(%d) = {%d:%d};\n',   n_spline+4,  leri(2)+3,leri(3)-3);
+fprintf(fid,'Spline(%d) = {%d:%d};\n',   n_spline+5,  leri(3)-3,leri(3)+3);
+fprintf(fid,'Spline(%d) = {%d:%d};\n',   n_spline+6,  leri(3)+3,leri(4)-3);
+fprintf(fid,'Spline(%d) = {%d:%d};\n',   n_spline+7,  leri(4)-3,leri(4)+3);
+fprintf(fid,'Spline(%d) = {%d:%d,%d};\n',n_spline+8,  leri(4)+3,p_index(end)+k,p_index(end)+1);
+
+bl_str = sprintf('%d,%d,%d,%d,%d,%d,%d,%d,%d',n_spline,...
+    n_spline+1,n_spline+2,n_spline+3,n_spline+4,...
+    n_spline+5,n_spline+6,n_spline+7,n_spline+8);
+
+fprintf(fid,'Line Loop(%d) = {%s};\n',n_loop,bl_str);
+
+p_index = [p_index,p_index(end)+k];
+
+end
+
+%% CORREZIONE BC DOPO CONVERSIONE
 function [done] = BC_cor(input,case_dir)
 
 if input == 'def'
@@ -507,7 +447,7 @@ end
 [~,outro] = system(sprintf('tail -n 3  %s/15dummy/constant/polyMesh/boundary',case_dir));
 
 [win,body] = system(sprintf('tail -n +20 %s/15dummy/constant/polyMesh/boundary > temp.txt && head -n 35 temp.txt',case_dir));
-[dummy,superdummy] = system('rm temp.txt');
+[~,~] = system('rm temp.txt');
 body_frag = strsplit(body,'\n'); %body_frag = body_frag{1:end-1};
 
 

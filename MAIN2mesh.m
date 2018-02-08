@@ -8,9 +8,9 @@ my_dir  = my_dir.path;
 my_dirs = genpath(my_dir);
 addpath(my_dirs);
 
-Parameters.gmsh_cmd     = '/usr/bin/gmsh';             % fisso
-%Parameters.gmsh_cmd     = '/home/tom/Documents/gmsh'; % portatile
-Parameters.n_processori = 8;
+%Parameters.gmsh_cmd     = '/usr/bin/gmsh';             % fisso
+Parameters.gmsh_cmd     = '/home/tom/Documents/gmsh'; % portatile
+Parameters.n_processori = 4;
 if exist(Parameters.gmsh_cmd,'file')
     % ok
 else 
@@ -25,14 +25,13 @@ IN = [50 250 50 250 50 2 0.02 0.03];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % INPUT DA TESTARE %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-l_airfoil_v  = [0.001,0.00075]
-n_cell_ff_v  = [10]
+l_airfoil_v  = [0.005];
+n_cell_ff_v  = [10];
 % grandezze in unità di corda
-x_dom_v     = 30 %30:10:60; % semilato quadrato
-alpha_v     = [12:2:16]
-
-
-SOLVER.endTime       = 3000;
+x_dom_v     = 10; %30:10:60; % semilato quadrato
+alpha_v     = [10];
+GM_par.wtd       = 0;
+SOLVER.endTime   = 2000;
 
 BL_vect = [2];
 
@@ -82,6 +81,8 @@ BU_par.wall_function = 1;
 
 BU_par.extrusion_Thickness = 0.05; %m
 
+fprintf('Re = %d \n\n',(BU_par.Rho*BU_par.L*BU_par.Umag)/(BU_par.Nu));
+
 %% MODELLO CFD
 STL.point_txt     = 'NACA64212at.txt';
 
@@ -92,14 +93,14 @@ STL.point_txt     = 'NACA64212at.txt';
 expRatio    = 1.1;
 
 % % % GMSH
-GM_par.wtd       = 0;
+
 GM_par.solver    = 'gmsh';
 
 GM_par.expRatio  = expRatio;
 
 
-GM_par.Fstruct   = 0;
-GM_par.Fquad     = 1;
+GM_par.Fstruct   = 1;
+GM_par.Fquad     = 0;
 
 % GM refinement
 % casi attualmente implementati
@@ -133,17 +134,20 @@ GM_par.Fquad     = 1;
 
 % % OPENFOAM
 SOLVER.solver        = 'simple';
+SOLVER.T_model       = 'sa'; % la, sa, ko
+SOLVER.PLT_history   = 1;
 SOLVER.startTime     = 0;
 
 SOLVER.deltaT        = 1;
 SOLVER.writeInterval = floor(SOLVER.endTime/25);
-
+SOLVER.PLT_history   = 1;
 %% OPT parametri
 
 OPT.nvars = 3;
 OPT.lb = [-100 -15 -40];
 OPT.ub = [   0  15 -5];
-OPT.x0 = 0.5*(OPT.lb+OPT.ub);
+%OPT.x0 = 0.5*(OPT.lb+OPT.ub);
+OPT.x0 = [-62 -6 -33]
 
 OPT.Aineq = [3/2, -1,0];
 OPT.bineq = -0.02;
@@ -174,7 +178,7 @@ for z = 1:size(BL_vect,2)
                 for w = 1:size(x_dom_v,2)
                     
                     
-                    
+                    clc
                     
                     fprintf('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n');
                     fprintf('l_air = %f; caso %d/%d \n',l_airfoil_v(i),i,max(size(l_airfoil_v)));
@@ -190,7 +194,7 @@ for z = 1:size(BL_vect,2)
                     xc = 'dummy';
                     
                     GM_par.l_airfoil = l_airfoil_v(i);
-                    GM_par.l_slat    = l_airfoil_v(i);
+                    GM_par.l_slat    = l_airfoil_v(i)/4;
                     BU_par.alpha = alpha_v(j);
                     BU_par.Ux    = BU_par.Umag*cos(BU_par.alpha*pi/180);
                     BU_par.Uz    = BU_par.Umag*sin(BU_par.alpha*pi/180);
@@ -209,13 +213,13 @@ for z = 1:size(BL_vect,2)
                     %       lunghezza elementi
                     %       l_w = method_par{4};
                     
-                    %     GM_par.ref_method = {'none'};
-                    %     GM_par.par_method = {0};
+                        GM_par.ref_method = {'none'};
+                        GM_par.par_method{1} = {0};
                     
-                    GM_par.ref_method = {'clock_simple'};%,'wake'};
-                    
-                    GM_par.par_method{1} = {1,10*l_airfoil_v(i)};
-                    %GM_par.par_method{2} = {0.5,2,2,100*l_airfoil_v(i)};
+%                     GM_par.ref_method = {'clock_simple','wake'};
+%                     
+%                     GM_par.par_method{1} = {1,10*l_airfoil_v(i)};
+%                     GM_par.par_method{2} = {0.5,2,2,30*l_airfoil_v(i)};
                     
                     
                     MESH_par     = GM_par;
@@ -225,7 +229,8 @@ for z = 1:size(BL_vect,2)
                     CFD.BU_par        = BU_par;
                     CFD.SOLVER        = SOLVER;
                     
-                    [cp_f{i,j}] = fCl_core(OPT.x0,IN,CFD,Parameters,xc);
+                    %[cp_f{i,j}] = fCl_core_OPT([],IN,CFD,Parameters,nan);
+                    [cp_f{i,j}] = fCl_core_OPT(OPT.x0,IN,CFD,Parameters,nan);
                     
                     
                 end

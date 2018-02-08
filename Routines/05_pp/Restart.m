@@ -1,8 +1,8 @@
 clean
 
 % case to restart
-Ctr = 475;
-IterNew = 5000;
+Ctr = 804;
+IterNew = 1000;
 
 
 for i = 1:size(Ctr,2)

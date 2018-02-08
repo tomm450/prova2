@@ -1,9 +1,12 @@
-function [Cl_history,Cd_history,t_history] = readClsimple(CD,wtr,dir,PLT,writeCSV)
+function [mat] = readClsimple(CD,wtr,dir,PLT,writeCSV,nameCSV)
 
+if nargin == 5
+nameCSV = 'report';
+end
 % LEGGO; SALVO IN CSV 
 
 if nargin == 1
-    wtr = [0:3];
+    wtr = [0:4];
     dir = 'Cases_folder/';
     PLT = 0;
     writeCSV = 0;
@@ -28,13 +31,14 @@ n_plot = 0;
 passo = 50;
 
 CSVMAT = [];
-
+cake = 0;
+tstart = tic;
 for i = 1:size(CD,2)
     
     dirProbe = strcat(dir,num2str(CD(i)));
     
     if exist(dirProbe,'dir') > 0
-        
+        cake = cake+1;
         fprintf('Sto leggendo caso %d \n',CD(i));
         
         n_plot = n_plot +1;
@@ -133,8 +137,9 @@ for i = 1:size(CD,2)
                     exetim = str2num(exetim); exetim = exetim/60;
                 end
                 
-                info_vect(33) = exetim;
-                
+                if max(size(exetim))==1
+                    info_vect(33) = exetim;
+                end
                 % CHECKMESH
                 if exist(sprintf('./%s/logcheckMesh.txt',dirProbe),'file')
                     % non devo rilanciare
@@ -205,7 +210,7 @@ for i = 1:size(CD,2)
                                
                 [~,meshres] = system(sprintf('tail -n 5 ./%s/logcheckMesh.txt',dirProbe));
                 fprintf('%s\n',meshres);
-                
+%                 
                 if size(mat) == [0 0]
                     % calcolo falito
                     mat = nan(1,4);
@@ -258,10 +263,18 @@ for i = 1:size(CD,2)
                 
                 info_vect(48:52) = [resUx(end) resUz(end) resP(end) resO(end) resK(end)];
                 
-                info_vect(53)    = mean(mat(ceil(0.99*size(mat,1)):end,4));
+                
+                [info_vect(53)] = periodic_recognition(mat(ceil(0.25*size(mat,1)):end,1),...
+                    mat(ceil(0.25*size(mat,1)):end,4),CD(i));
+                
+               % info_vect(54)    = sum((b.X_IN == [-62 -6 -33]));
                 
                 plt_style = pl_style_fun(n_plot);
                 
+                if cake == 15
+                    cake = 0;
+                    clc
+                end
                 if PLT == 1
                     
                     figure(2500); plot(iterV,mat(ps:passo:end,4),plt_style); hold on; grid on
@@ -303,7 +316,7 @@ for i = 1:size(CD,2)
 end
 
 if writeCSV == 1
-   csvwrite('report.csv',CSVMAT)
+   csvwrite(strcat(nameCSV,'.csv'),CSVMAT)
 end
 
 if PLT == 1
@@ -311,6 +324,7 @@ if PLT == 1
     figure(2501); legend(leg_cell);
 end
 
+fprintf('ReadCoeff in %d sec \n\n\n',toc(tstart));
 
 % %for f = 1:2
 % if size(whatCase,2) > 0 
@@ -353,4 +367,127 @@ for w = 1:n_line
     end
 end
 plt_style = strcat(plotc{ic},plots{is},plotl{il});
+end
+
+function [MEDIA,periodo] = periodic_recognition(x,y,numtitle)
+
+plt = 0;
+% size
+%
+% y = mat(1000:end,4);
+% x = mat(1000:end,1);
+minY = min(y);
+maxY = max(y);
+
+top = y > (1-0.15*sign(maxY))*maxY;
+bot = y < (1+0.15*sign(minY))*minY;
+
+
+if plt == 1
+handles=findall(0,'type','figure');
+
+for k = 1:max(size(handles))
+    figListIntermedio = handles(k); 
+    figList(k) = figListIntermedio.Number;
+end
+
+if exist('figList','var')
+    figure(max(figList)+1)
+else
+    figure(15000);
+end
+
+plot(x,y,'b');
+hold on
+title(num2str(numtitle))
+plot(x,y.*top,'r')
+plot(x,y.*bot,'c')
+end
+
+P  = []; V  = [];
+Px = []; Vx = [];
+for i = 2:size(x,1)-1
+    
+    if top(i) == 0
+        % nothing to do here
+    else
+        if top(i-1) == 0
+            % inizio picco
+            ipx = x(i);
+            ip  = i;
+        end
+        
+        if exist('ip','var') && top(i+1) == 0
+            % fine picco
+            fpx = x(i);
+            fp  = i;
+            Px = [Px,ipx+0.5*(fpx-ipx)];
+            P  = [P ,round(ip+0.5*(fp-ip))];
+            
+        end
+        
+    end
+    
+    if bot(i) == 0
+        % nothing to do here
+    else
+        if bot(i-1) == 0
+            % inizio voragine
+            iv  = i;
+            ivx = x(i);
+        end
+        
+        if exist('iv','var') && bot(i+1) == 0
+            % fine voragine
+            fv  = i;
+            fvx = x(i);
+            V  = [V ,round(iv+0.5*(fv-iv))];
+            Vx = [Vx,ivx+0.5*(fvx-ivx)];
+        end
+    end
+end
+
+fprintf('P = %d ; V = %d  \n',size(P,2)-1,size(V,2)-1);
+
+if size(P,2) > 3 && size(V,2) > 3
+    % probable oscillation
+    Vlast = V(end-3:end);
+    Plast = P(end-3:end);
+    
+%     fprintf('stdPtest = %d ; stdVtest = %d  \n',...
+%         std(diff(Plast)) < 0.05*mean(diff(Plast)),...
+%         std(diff(Vlast)) < 0.05*mean(diff(Vlast)));
+    
+    %if std(diff(Vlast)) < 0.05*mean(diff(Vlast)) ...
+    %        && std(diff(Plast)) < 0.05*mean(diff(Plast))
+        % ok è periodico
+        
+        for j = 1:min([size(P,2)-1,size(V,2)-1])
+            
+            m1(j) = mean(y(P(j):P(j+1)));
+            m2(j) = mean(y(V(j):V(j+1)));
+            
+        end
+        
+        if fp > fv
+            MEDIA = m1(end);
+        else
+            MEDIA = m2(end);
+        end
+        periodo = mean([diff(Plast),diff(Vlast)]);
+        if plt == 1
+        plot(Px,zeros(size(Px)),'ro');
+        plot(Vx,zeros(size(Vx)),'bo');
+    end
+    
+else
+    
+    MEDIA = mean(y(ceil(0.95*max(size(y)):end)))
+    
+end
+
+if plt == 1
+hold on
+plot(x,MEDIA*ones(1,max(size(top))),'k')
+end
 end
