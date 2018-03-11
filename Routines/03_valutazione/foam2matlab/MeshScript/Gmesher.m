@@ -22,11 +22,11 @@ ds1       = SCALA*GM_par.ds1;
         % BL non ha limiti come nel caso 2, transizione tc
         % thick_cell(end)*exp_ratio = l_airfoil
         
-        [thick_error,i_thick] = min(abs(thick_cell_try-l_airfoil/exp_ratio));
+        [thick_error,i_thick] = min(abs(thick_cell_try-0.3*(l_airfoil/exp_ratio)));
         
-        GM_par.nlay = round(i_thick/2)+1;
+        GM_par.nlay = round(i_thick)+1;
         
-        thick_sum = sum(thick_cell_try(1:i_thick));
+        thick_sum = sum(thick_cell_try(1:GM_par.nlay));
         
     elseif GM_par.BL == 2 % foam
         

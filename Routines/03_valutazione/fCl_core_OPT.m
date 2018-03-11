@@ -1,5 +1,7 @@
 function [f_cell] = fCl_core_OPT(X_IN,IN,RES_struct,Parameters,usefulCoor)
 
+% f_cell = {[CL;CD],cp,-CL,inequalityC,[CL_conv,CD_conv]};
+
 STL           = RES_struct.STL;
 BU_par        = RES_struct.BU_par;
 MESH_par      = RES_struct.MESH_par;
@@ -52,7 +54,7 @@ if BU_par.wall_function == 1
     
 else
     
-    yplus_tgt = 1;
+    yplus_tgt = 0.5;
     MESH_par.ds1      = (yplus_tgt*BU_par.Nu)/(Ufric*BU_par.Rho);
     BU_par.omega_body = 60*BU_par.Nu/(0.09*(MESH_par.ds1)^2);
 
@@ -114,7 +116,7 @@ tstart = tic;
 if MESH_par.solver == 'gmsh'
     
     %[~] = Gmesher(X_IN,IN,STL,MESH_par,case_dir,Parameters,SOLVER,BU_par.L);
-    [~] = Gmesherrd(X_IN,IN,STL,MESH_par,case_dir,Parameters,SOLVER,BU_par.L);
+    [~] = Gmesherrd(X_IN,IN,BU_par,MESH_par,case_dir,Parameters,SOLVER);
 elseif MESH_par.solver == 'snap'
      error('Snapper.m è da aggiornare\n');        
 %    [ done,crono ] = Snapper( X_IN,IN,STL,MESH_par,case_dir,Parameters );
@@ -124,13 +126,15 @@ crono(1) = toc(tstart)/60;
 
 fprintf('\ncd %s/20extrude && checkMesh > ../logcheckMesh.txt \n',case_dir)
 [result,~]=goGoOpenFOAM(sprintf('cd %s/20extrude && checkMesh > ../logcheckMesh.txt ',case_dir));
-[result,logMesh]=system(sprintf('tail -n 20 %s/logcheckMesh.txt',case_dir));
+[result,logMesh]=system(sprintf('tail -n +1 %s/logcheckMesh.txt',case_dir));
 
 fprintf('\n%s \n',logMesh);
 
 fprintf('\nMesh in %f min \n\n',crono(1));
 
-
+% 
+% f_cell = 'dum'
+% return
 %% SCRIVO DICT
 tstart = tic;
 bu_type = BU_par.BU_type;  % 'freestream';
@@ -216,21 +220,11 @@ CD_conv = std(CD_conv);
 fprintf('std(end-200:end) = [%f %f] \n',CL_conv,CD_conv);
 
 
-fprintf('READ SIMPLE e SCRIVO CSV \n');
-[rcls_output] = readClsimple(ID,[0:4],'./Cases_folder/',1,1,strcat(case_dir,'/CSV'));
+
 
 f_cell =  {CL,CD,CL_conv,CD_conv};
 
-%% TAGLIA-CUCI
-if isnan(usefulCoor) == 1
-    return
-end
 
-% AGGIORNARE
-
-xc    = usefulCoor{1}/1000;
-cd.xp = usefulCoor{2}/1000; % current design
-cd.yp = usefulCoor{3}/1000; % current design
 
 case_folder = sprintf('%s/Cases_folder/%d',pwd,ID);
 
@@ -252,6 +246,19 @@ goGoOpenFOAM(sprintf('pvbatch %s',TO_BE_OPEN));
 system(sprintf('cd %s && tail -n +2 %d0.csv > %dc.csv',case_folder,ID,ID));
 
 air_mat = csvread(sprintf('%s/%dc.csv',case_folder,ID));
+
+%% TAGLIA-CUCI
+if isnan(usefulCoor{1}) == 1
+    return
+end
+fprintf('READ SIMPLE e SCRIVO CSV \n');
+[rcls_output] = readClsimple(ID,[0:4],'./Cases_folder/',1,1,strcat(case_dir,'/CSV'));
+% AGGIORNARE
+
+xc    = usefulCoor{1}/1000;
+cd.xp = usefulCoor{2}/1000; % current design
+cd.yp = usefulCoor{3}/1000; % current design
+
 
 %% per calibrazione commentare
 %cd = load('current_design.mat');

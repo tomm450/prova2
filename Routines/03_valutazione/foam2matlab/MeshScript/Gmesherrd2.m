@@ -1,4 +1,4 @@
-function [telapsed] = Gmesherrd(X_IN,IN,STL,GM_par,case_dir,Parameters,SOLVER,SCALA)
+function [telapsed] = Gmesherrd2(X_IN,IN,BU_par,GM_par,case_dir,Parameters,SOLVER,SCALA)
 
 % genera mesh con gmsh, aggoinge i BL con refineLayer, estrude con
 % extrudeMesh e copia nella cartella simple
@@ -24,9 +24,9 @@ ds1       = SCALA*GM_par.ds1;
         
         [thick_error,i_thick] = min(abs(thick_cell_try-l_airfoil/exp_ratio));
         
-        GM_par.nlay = round(i_thick);
+        GM_par.nlay = round(i_thick/2)+1;
         
-        thick_sum = sum(thick_cell_try(1:GM_par.nlay));
+        thick_sum = sum(thick_cell_try(1:i_thick));
         
     elseif GM_par.BL == 2 % foam
         
@@ -195,12 +195,12 @@ for i = 1:max(size(GM_par.ref_method))
     %         nstaz = method_par{5};
     
     [lastpoint] = refineModuleGmsh(GM_par.ref_method{i},GM_par.par_method{i},...
-        fid,lastpoint,l_airfoil,x_dom,l_dom);
+        fid,lastpoint,l_airfoil,x_dom);
     
 end
 
 %//Extrude unstructured far field mesh
-fprintf(fid,'Extrude {0, 1, 0} {\n');
+fprintf(fid,'Extrude {0, %d, 0} {\n',BU_par.extrusion_Thickness);
 fprintf(fid,'Surface {201};\n');
 fprintf(fid,'Layers{1};\n');
 fprintf(fid,'Recombine;\n');
@@ -231,14 +231,14 @@ if GM_par.BL == 1
     %Threshold angle for creating a mesh fan in the boundary layer
     %type: float
     %default value: 10000000000
-    fprintf(fid,'Field[1].AnisoMax = 10000000000;\n');
+    fprintf(fid,'Field[1].AnisoMax = 1000;\n');
     
     %EdgesList
     %Indices of curves in the geometric model for which a boundary layer
     %is needed
     %type: list
     %default value: {}
-    fprintf(fid,'Field[1].EdgesList = {%s};\n',airfoil_boundary);
+    fprintf(fid,'Field[1].EdgesList = {%s};\n',bl_str);
     
     %FanNodesList
     %Indices of vertices in the geometric model for which a fan is created
@@ -316,15 +316,13 @@ system(sprintf('touch %s/logmesh.txt',case_dir));
 % sistemo BC
 [done] = BC_cor('def',case_dir);
 
-[status] = system(sprintf('rm  %s/20extrude/constant/polyMesh/* >> %s/logmesh.txt',case_dir,case_dir));
+% [status] = system(sprintf('rm  %s/20extrude/constant/polyMesh/* >> %s/logmesh.txt',case_dir,case_dir));
+% 
+% [status] = system(sprintf('rm -r %s/30simple/constant/polyMesh >> %s/logmesh.txt',case_dir,case_dir));
+% [status] = system(sprintf('rm -r %s/40piso/constant/polyMesh >> %s/logmesh.txt',case_dir,case_dir));
+% 
+% [status] = goGoOpenFOAM(sprintf('cd %s/20extrude && extrudeMesh >> ../logmesh.txt',case_dir));% && paraFoam');
 
-[status] = system(sprintf('rm -r %s/30simple/constant/polyMesh >> %s/logmesh.txt',case_dir,case_dir));
-[status] = system(sprintf('rm -r %s/40piso/constant/polyMesh >> %s/logmesh.txt',case_dir,case_dir));
-
-[status] = goGoOpenFOAM(sprintf('cd %s/20extrude && extrudeMesh >> ../logmesh.txt',case_dir));% && paraFoam');
-
-
-fid = fopen(sprintf('%s/20extrude/logProg.txt',case_dir),'w+');
 if GM_par.BL == 2
     
     for j = 1:GM_par.nlay-1
@@ -333,25 +331,27 @@ if GM_par.BL == 2
         thick_start = sum( ds1*exp_ratio.^([0:step]));
         thick_end   = sum( ds1*exp_ratio.^([0:step-1]));
         
-        %thick_end/thick_start
-        
-        
-        [status] = goGoOpenFOAM(sprintf('cd %s/20extrude && refineWallLayer -overwrite ''(airfoil)'' %d >> ../logmesh.txt',...
-            case_dir,thick_end/thick_start));
-        [a,report] = goGoOpenFOAM(sprintf('cd %s/20extrude && checkMesh',case_dir));
-        fprintf(fid,'%d ################################################################################\n%s\n',j,report);
+        %[status] = goGoOpenFOAM(sprintf('cd %s/20extrude && refineWallLayer -overwrite ''(airfoil)'' %1.3f >> ../logmesh.txt',...
+        [status] = goGoOpenFOAM(sprintf('cd %s/15dummy && refineWallLayer -overwrite ''(airfoil)'' %1.3f >> ../logmesh.txt',...
+         case_dir,thick_end/thick_start));
         
     end
 end
 
-fclose(fid);
-[resultRenumber,logRenumber]=goGoOpenFOAM(sprintf('cd %s/20extrude && renumberMesh',case_dir));
+%[resultRenumber,logRenumber]=goGoOpenFOAM(sprintf('cd %s/20extrude && renumberMesh',case_dir));
+[resultRenumber,logRenumber]=goGoOpenFOAM(sprintf('cd %s/15dummy && renumberMesh',case_dir));
+
 
 if strcmp(SOLVER.solver,'simple')
     [~,~] = system(sprintf('mkdir %s/30simple/constant/polyMesh',case_dir));
-    [~,~] = system(sprintf('cp -r %s/20extrude/1/polyMesh/* %s/30simple/constant/polyMesh/',case_dir,case_dir));
+    %[~,~] = system(sprintf('cp -r %s/20extrude/1/polyMesh/* %s/30simple/constant/polyMesh/',case_dir,case_dir));
+    [~,~] = system(sprintf('cp -r %s/15dummy/constant/polyMesh/* %s/30simple/constant/polyMesh/',case_dir,case_dir));
+
 elseif strcmp(SOLVER.solver,'piso')
-    [~,~] = system(sprintf('cp -r %s/20extrude/1/polyMesh %s/40piso/constant/',case_dir,case_dir));
+%    [~,~] = system(sprintf('cp -r %s/20extrude/1/polyMesh %s/40piso/constant/',case_dir,case_dir));
+    [~,~] = system(sprintf('mkdir %s/40piso/constant/polyMesh',case_dir));
+    [~,~] = system(sprintf('cp -r %s/15dummy/constant/polyMesh/* %s/40piso/constant/polyMesh/',case_dir,case_dir));
+
 else
     error('someway,somewhere,someone fuck up');
 end

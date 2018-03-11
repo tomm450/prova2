@@ -32,10 +32,6 @@ up_temp(:,1) = -up_temp(:,1);
 
 dwn_temp = in( (m+1):end,:);
 
-
-
-
-
 stra = [up_temp;dwn_temp];
 
 

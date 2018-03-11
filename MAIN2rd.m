@@ -77,7 +77,7 @@ BU_par.extrusion_Thickness = 0.05; %m
 BU_par.wall_function = 1;
 
 %% HS
-Parameters.HSA.npane = 150;
+Parameters.HSA.npane = 100;                                                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% MODELLO CFD
 
@@ -87,23 +87,26 @@ x_dom     = 300; % semilato quadrato
 expRatio  = 1.3;
 n_cell_ff = 15;
 
-% GMSH
+% GMSHà
 GM_par.wtd       = 3;
 GM_par.solver    = 'gmsh'; 
 GM_par.x_dom     = x_dom;
 % 
 GM_par.l_dom     = GM_par.x_dom/(2*n_cell_ff);
 GM_par.expRatio  = expRatio;
-GM_par.l_airfoil = 0.003;
-GM_par.l_slat    = 0.003;
+GM_par.l_airfoil = 0.004;
+GM_par.l_slat    = 0.004;
 GM_par.Fstruct   = 1;
 GM_par.Fquad     = 1;
 
 % GM refinement: scrivere help refineModuleGmsh.m
 
-
- GM_par.ref_method = {'wake2'};
- GM_par.par_method{1} = {1,0,BU_par.alpha,3,max([0.05,10*GM_par.l_airfoil])};
+% RAPIDO PER PROVE
+GM_par.ref_method = {'none'};                                              %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+GM_par.par_method = {0};
+% UFFICIALE
+%GM_par.ref_method = {'wake2'};
+%GM_par.par_method{1} = {1,0,BU_par.alpha,3,max([0.05,10*GM_par.l_airfoil])};
 
 GM_par.BL = 2;
 % % %
@@ -114,7 +117,7 @@ SOLVER.solver        = 'simple';
 SOLVER.T_model       = 'ko'; % la, sa, ko
 SOLVER.PLT_history   = 1;
 SOLVER.startTime     = 0;
-SOLVER.endTime       = 10000;
+SOLVER.endTime       = 3500;                                               %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 SOLVER.deltaT        = 1;
 SOLVER.writeInterval = floor(SOLVER.endTime/50);
 
@@ -169,33 +172,79 @@ OPT.StepTolerance_Data          = 1e-4;
 %% ACTUAL MM
 MASTER = [];
 iter_f = 1;
-fvals_f = {}; ISsol_f = {};
-fvals_c = {}; ISsol_c = {};
-Skf     = {}; Skk     = {};
+fvals_f = {}; ISsol_f_ma = {}; ISsol_f_se = {};
+fvals_c = {}; ISsol_c_ma = {}; ISsol_c_se = {};
+Skf     = {}; Skk_ma     = {}; Skk_se     = {};
 
 max_iter = 10;
 
 dx = 1; nonImpr = 0;
           % ripartire? da dove? con che file? da dove?
-restart = {0,0,'./Output/1dump_1fmin.mat'};    
+restart = {1,2,'./Output/1dump.mat'};    
 
+periodic_indicator = 1;
 
 while iter_f < max_iter && dx > 1e-3 && nonImpr < 8
     
-    if restart{1} == 1 && restart{1} == 1
-        load(restart{3});
-        restart{1} = 0;
-    elseif restart{1} == 1 && restart{1} > 1
-        % do nothing
-    else
+    vala_cor = 0;
+    k_safety = 1;
+    periodic_indicator = 1;
+    
+    while periodic_indicator == 1 && vala_cor <= 3
+        
+        vala_cor = vala_cor+1;
+        
+        if restart{1} == 1 && restart{2} == 1
+            load(restart{3});
+            restart{1} = 0;
+        elseif restart{1} == 1 && restart{2} > 1
+            % do nothing
+        else
+            
+            DELTALIM{iter_f}(vala_cor) = 14/(1.1^(vala_cor-1));
+            fprintf('\nDELTA_OPT = %f \n',DELTALIM{iter_f}(vala_cor));
+            
+            % riordino
+            % ...     = {[CL;CD],      cp,           ...
+            %c_cell    = {c_cell{1},    c_cell{2},    fitnessC,    inequalityC};
+            %copt_cell = {copt_cell{1}, copt_cell{2}, fitnessCopt, inequalityCopt};
+            [c_cellv{iter_f,vala_cor},copt_cellv{iter_f,vala_cor},...
+                WIN_OPTv{iter_f,vala_cor},FULL_OPTv{iter_f,vala_cor},usefulCoorv{iter_f,vala_cor}] = ...
+                toBeMin(OPT,BU_par,Parameters,GEOM,DELTALIM{iter_f}(vala_cor),...
+                fvals_f,fvals_c,Skf,ISsol_f_ma,ISsol_c_ma,Skk_ma,...
+                                    ISsol_f_se,ISsol_c_se,Skk_se);
+        end
+        
+        save(sprintf('./Output/%d_%d_dump_1fmin.mat',iter_f,vala_cor));
+        
+
+        
+        if restart{1} == 1 && restart{2} == 2
+            load(restart{3});
+            restart{1} = 0;
+        else
+            %f_cell = {[CL;CD],cp,-CL,inequalityC,[CL_conv,CD_conv]};
+            [f_cellv{iter_f,vala_cor}] = fCl_core_OPT(WIN_OPTv{iter_f,vala_cor}{1},IN,CFD,Parameters,usefulCoorv{iter_f,vala_cor});
+        end
+        
+        save(sprintf('./Output/%d_%d_dump_2cfd.mat',iter_f,vala_cor));
+        
+        if abs(f_cellv{end,vala_cor}{end}(1)) < 1e-3
+            fprintf('SOLUZIONE NON PERIODICA\n');
+            periodic_indicator = 0;
+            
+        end
         
         
-        [c_cell{iter_f},copt_cell{iter_f},...
-            WIN_OPT{iter_f},FULL_OPT{iter_f},usefulCoor{iter_f}] = ...
-            toBeMin(OPT,BU_par,Parameters,GEOM,...
-            fvals_f,fvals_c,Skf,ISsol_f,ISsol_c,Skk);
+        
     end
-    save(sprintf('./Output/%ddump_1fmin.mat',iter_f));
+        
+    c_cell{iter_f}     = c_cellv{iter_f,end}; 
+    copt_cell{iter_f}  = copt_cellv{iter_f,end};
+    WIN_OPT{iter_f}    = WIN_OPTv{iter_f,end};
+    FULL_OPT{iter_f}   = FULL_OPTv{iter_f,end};
+    usefulCoor{iter_f} = usefulCoorv{iter_f,end};
+    f_cell{iter_f}     = f_cellv{iter_f,end};
     
     if iter_f == 1
         OPT.x0(end+1,:) =  WIN_OPT{iter_f}{1};
@@ -203,13 +252,9 @@ while iter_f < max_iter && dx > 1e-3 && nonImpr < 8
         OPT.x0(end,:) =    WIN_OPT{iter_f}{1};
     end
     
-    if restart{1} == 1 && restart{1} == 2
-        load(restart{3});
-        restart{1} = 0;
-    else
-        [f_cell{iter_f}] = fCl_core_OPT(WIN_OPT{iter_f}{1},IN,CFD,Parameters,usefulCoor{iter_f});
-    end
+    save(sprintf('./Output/%ddump_1fmin.mat',iter_f));
     save(sprintf('./Output/%ddump_2cfd.mat',iter_f));
+    
     %[CLf,CDf] = aeroCoeff( xc,dl,theta_G,cp_f,BU_par );
     
     
@@ -283,14 +328,21 @@ while iter_f < max_iter && dx > 1e-3 && nonImpr < 8
     fvals_f{iter_f}    = f_cell{iter_f}{1};
     
     
-    ISsol_c{iter_f}    = c_cell{iter_f}{2};
+    ISsol_c_ma{iter_f}    = c_cell{iter_f}{2}(1:2*n);
     %cp_corr = copt_cell{iter_f}{2};
-    ISsol_f{iter_f}    = f_cell{iter_f}{2};
+    ISsol_f_ma{iter_f}    = f_cell{iter_f}{2}(1:2*n);
     
+    ISsol_c_se{iter_f}    = c_cell{iter_f}{2}((2*n):end);
+    %cp_corr = copt_cell{iter_f}{2};
+    ISsol_f_se{iter_f}    = f_cell{iter_f}{2}((2*n):end);   
      
     if iter_f == 1  % ho calcolato un fvals_c e un fvals_f, Skk e Skf saranno eye
         Skf = {eye(max(size(fvals_f{end})))};
-        Skk = {eye(max(size(ISsol_f{end})))};
+        
+        
+        Skk_ma = {eye(max(size(ISsol_f_ma{end})))};
+        Skk_se = {eye(max(size(ISsol_f_se{end})))};
+        
         % Skh = {1};
        
         DF = [];
@@ -306,9 +358,13 @@ while iter_f < max_iter && dx > 1e-3 && nonImpr < 8
             DF(:,w) = [fvals_f{end} - fvals_f{end-w}];
             DC(:,w) = [fvals_c{end} - fvals_c{end-w}];
             
-            DISf(:,w) = [ISsol_f{end} - ISsol_f{end-w}(1)];
-            DISc(:,w) = [ISsol_c{end} - ISsol_c{end-w}(1)];
-            %
+            DISf_ma(:,w) = [ISsol_f_ma{end} - ISsol_f_ma{end-w}(1)];
+            DISc_ma(:,w) = [ISsol_c_ma{end} - ISsol_c_ma{end-w}(1)];
+
+            DISf_se(:,w) = [ISsol_f_se{end} - ISsol_f_se{end-w}(1)];
+            DISc_se(:,w) = [ISsol_c_se{end} - ISsol_c_se{end-w}(1)];
+            %            
+
             %             DHf(:,w)  = [Hf{end} - Hf{end-w}];
             %             DHc(:,w)  = [Hc{end} - Hc{end-w}];
             
@@ -322,7 +378,8 @@ while iter_f < max_iter && dx > 1e-3 && nonImpr < 8
         %DF
         
         [Uf,Sf,Vf] = svd(DC);
-        [Us,Ss,Vs] = svd(DISc);
+        [Us_ma,Ss_ma,Vs_ma] = svd(DISc_ma);
+        [Us_se,Ss_se,Vs_se] = svd(DISc_se);
         %         [Uh,Sh,Vh] = svd(DHc);
         
         
@@ -335,10 +392,16 @@ while iter_f < max_iter && dx > 1e-3 && nonImpr < 8
             end
         end
         
-        Ss_cros = Ss';
-        for j = 1: min([size(Ss_cros,1),size(Ss_cros,2)])
-            if abs(Ss_cros(j,j)) >= 1e-10
-                Ss_cros(j,j) = 1/Ss_cros(j,j);
+        Ss_cros_ma = Ss_ma';
+        for j = 1: min([size(Ss_cros_ma,1),size(Ss_cros_ma,2)])
+            if abs(Ss_cros_ma(j,j)) >= 1e-10
+                Ss_cros_ma(j,j) = 1/Ss_cros_ma(j,j);
+            end
+        end
+        Ss_cros_se = Ss_se';
+        for j = 1: min([size(Ss_cros_se,1),size(Ss_cros_se,2)])
+            if abs(Ss_cros_se(j,j)) >= 1e-10
+                Ss_cros_se(j,j) = 1/Ss_cros_se(j,j);
             end
         end
         %
@@ -350,11 +413,13 @@ while iter_f < max_iter && dx > 1e-3 && nonImpr < 8
         %         end
                
         DCc   = Vf*Sf_cros*Uf';
-        DIScc = Vs*Ss_cros*Us';
+        DIScc_ma = Vs_ma*Ss_cros_ma*Us_ma';
+        DIScc_se = Vs_se*Ss_cros_se*Us_se';
         %         DHcc = Vh*Sh_cros*Uh';
         
         Skf{end+1} = DF*DCc;
-        Skk{end+1} = DISf*DIScc;
+        Skk_ma{end+1} = DISf_ma*DIScc_ma;
+        Skk_se{end+1} = DISf_se*DIScc_se;
         %         Skh{end+1} = DHf*DHcc;
         
         

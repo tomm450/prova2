@@ -109,7 +109,7 @@ if PLT == 1
         %plot(xc(2,:),yc(2,:),'xr','LineWidth',2);
     end
     
-    st0 = sprintf('alpha = %2.3f deg;',BU_par.alpha);%
+    st0 = sprintf('Alpha = %d deg;',BU_par.alpha);%
     
     if size(IN,2) >= 3
         st1 = sprintf(' X_{IN} = [ %1.3f %1.3f %1.3f ]',IN(1),IN(2),-IN(3));
@@ -146,13 +146,13 @@ if PLT == 1
     grid on
     set(gca,'YDir','Reverse'); % reverse y axis
     %alfa=num2str(alpha*180/pi);
-    tit1 = 'COEFFICIENTE DI PRESSIONE';
-    tit2 = ['Incidenza: ',BU_par.alpha, ' gradi'];
-    title({tit1;tit2})
-    xlabel('corda');
+%    tit1 = 'COEFFICIENTE DI PRESSIONE';
+%     tit2 = ['Incidenza: ',BU_par.alpha, ' gradi'];
+%     title({tit1;tit2})
+    xlabel('X coordinate');
     ylabel('-C_p');
-    
-    legend('Dorso HS','Ventre HS','Location','best');
+    title('Pressure coefficient')
+    %legend('Dorso HS','Ventre HS','Location','best');
 
 
 
@@ -228,13 +228,9 @@ for p = 1:size(xc,1)
                     
                 end
                 
-                if RK == 1
-                    if p == q
-                        b{p}(j,1) = -U_inf*N(:,j,p);
-                    end
-                else
-                    
-                    b{p,q}(j,1) = -U_inf*N(:,j,p);
+                
+                if p == q
+                    b{p}(j,1) = -U_inf*N(:,j,p);
                 end
             end
 
@@ -243,15 +239,12 @@ for p = 1:size(xc,1)
             B{p,q}(:,end) = sum(D{p,q},2);
 
             %% Condizione di Kutta
-            A{p,q}(end,:) = B{p,q}(1,:)+ B{p,q}(end,:);
+            A{p,q}(end,:) = B{p,q}(1,:)+B{p,q}(end,:);
             
-            if RK == 1
-                if p == q
-                    b{p}(end+1) = -U_inf*(T(:,1,p)+T(:,end,p));
-                end
-            else
-                b{p,q}(end+1) = -U_inf*(T(:,1,p)+T(:,end,p));
+            if p == q
+                b{p}(end+1) = -U_inf*(T(:,1,p)+T(:,end,p));
             end
+
     end
 end
 
@@ -261,32 +254,18 @@ end
  AM = [];
  BM = [];
  bM = [];
+ 
  for i = 1:size(xc,1)
      Ar = [];
      Br = [];
      for j = 1:size(xc,1)
          Ar = [Ar,A{i,j}];
-         Br = [Br,B{i,j}];
-        
-        
+         Br = [Br,B{i,j}];     
      end
-     
-     
-     if RK == 2
-         
-      br = zeros(size(b{1,1}));
-      
-       for j = 1:size(xc,1)
-            br = [br+b{j,i}];
-       end
-       
-       bM = [bM;br];
-     else
-         
-       bM = [bM;b{i}];  
-     end
-     
-     
+          
+              
+     bM = [bM;b{i}];  
+              
      AM = [AM;Ar];
      BM = [BM;Br];     %
  end
@@ -331,6 +310,7 @@ function [R] = rotation_matrix(theta)
 end
 
 function [r1,r2,dt] = radius_dtheta(xc,yc,xp,yp,xp2,yp2,R,varargin)
+
     if nargin == 7
         j=2;k=3;
     else
@@ -363,6 +343,8 @@ function [Us,Vs] = source_induced_speed(r1,r2,dt,varargin)
 
     Us = -sigma./(2*pi)*log(norm(r2)/norm(r1));
     Vs = sigma.*(dt)/(2*pi);
+    
+    
 end
 
 function [Uv,Vv] = vortex_induced_speed(r1,r2,dt,varargin)
@@ -372,11 +354,10 @@ function [Uv,Vv] = vortex_induced_speed(r1,r2,dt,varargin)
         gamma = varargin{1};
     end
     
-    if norm(r1) < 1e-5 || norm(r1) < 1e-5
-        Uv = 0; Vv = 0;
-    else
-        
-    Uv = -gamma.*(dt)/(2*pi);
-    Vv = -gamma./(2*pi)*log(norm(r2)/norm(r1));
-    end
+     if norm(r1) < 1e-5 || norm(r1) < 1e-5
+         Uv = 0; Vv = 0;
+     else
+        Uv = -gamma.*(dt)/(2*pi);
+        Vv = -gamma./(2*pi)*log(norm(r2)/norm(r1));
+     end
 end
